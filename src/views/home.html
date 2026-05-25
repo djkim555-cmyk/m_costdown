@@ -1,0 +1,76 @@
+<div class="container">
+
+    <h1 class="h4 fw-bold mb-3">비용절감 대시보드</h1>
+
+    <!-- 로딩 -->
+    <div v-if="!loaded" class="text-center text-muted py-5">
+        <div class="spinner-border text-primary mb-2"></div>
+        <div>데이터를 불러오는 중...</div>
+    </div>
+
+    <template v-else>
+        <!-- 회사 예측 / 절감 전략 수행 표 -->
+        <div class="card mb-3" v-for="(tbl, ti) in tables" :key="ti">
+            <div class="card-body">
+                <div class="card-title-sm">{{ tbl.title }}</div>
+                <div class="table-responsive">
+                    <table class="table table-sm fc-table align-middle mb-0">
+                        <colgroup>
+                            <col v-for="(w, wi) in colWidths" :key="wi" :style="{ width: w + 'px' }">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="fc-name">판매비와 관리비 세부 항목</th>
+                                <th v-for="(c, ci) in tbl.cols" :key="ci" class="num">
+                                    <span v-if="c.stage" class="fc-stage">{{ c.stage }}</span>{{ c.label }}
+                                </th>
+                                <th class="num fc-agg">평균</th>
+                                <th class="num fc-agg">합계</th>
+                                <th class="num fc-agg">비중</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(row, ri) in tbl.rows" :key="ri" :class="'fc-' + row.kind">
+                                <td class="fc-name">{{ row.name }}</td>
+                                <td v-for="(v, vi) in row.values" :key="vi" class="num"
+                                    :class="{ 'fc-forecast': vi >= tbl.forecastFrom }">
+                                    <template v-if="v != null">{{ comma(v) }}<span
+                                        v-if="cellSaving(tbl, ri, vi) != null"
+                                        class="fc-save" :class="savingClass(cellSaving(tbl, ri, vi))"
+                                    >{{ savingText(cellSaving(tbl, ri, vi)) }}</span></template>
+                                </td>
+                                <td class="num fc-agg">{{ comma(row.avg) }}</td>
+                                <td class="num fc-agg">{{ comma(row.total) }}</td>
+                                <td class="num fc-agg">{{ ratioText(row.ratio) }}</td>
+                            </tr>
+                            <!-- 절감율 행 (절감 전략 수행 표에만, 5월부터) -->
+                            <tr v-if="tbl.baseRef != null" class="fc-saverow">
+                                <td class="fc-name">절감율</td>
+                                <td v-for="(s, si) in savingRow(tbl)" :key="si"
+                                    class="num" :class="savingClass(s)">{{ savingText(s) }}</td>
+                                <td class="num"></td>
+                                <td class="num"></td>
+                                <td class="num"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 거래처별 비용 (전체) -->
+        <div class="card">
+            <div class="card-body">
+                <div class="card-title-sm">거래처별 비용 (전체 {{ byVendor.length }}곳)</div>
+                <div class="bar-row" v-for="r in byVendor" :key="r.key">
+                    <div class="bar-label" :title="r.key">{{ r.key }}</div>
+                    <div class="bar-track">
+                        <div class="bar-fill green" :style="{ width: width(r.total, byVendor) }"></div>
+                    </div>
+                    <div class="bar-value">{{ short(r.total) }}</div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+</div>

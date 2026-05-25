@@ -1,0 +1,355 @@
+<div class="container">
+
+    <div class="page-head">
+        <h1>비용절감 전략 B안</h1>
+        <p class="lead-sub">
+            맑은소프트 전사 비용절감 전략 B안 · <strong>운영 효율화·내재화 집중</strong> ·
+            인프라 3년 약정 제약 하에서 단가가 아닌 사용량·운영 방식 변경으로 풀어내는 접근
+        </p>
+    </div>
+
+    <!-- 로딩 -->
+    <div v-if="!loaded" class="text-center text-muted py-5">
+        <div class="spinner-border text-primary mb-2"></div>
+        <div>데이터를 불러오는 중...</div>
+    </div>
+
+    <template v-else>
+
+        <!-- B안 컨셉 콜아웃 -->
+        <div class="rec-callout theme-b mb-4">
+            <div class="rec-callout-icon"><i class="bi bi-gear-wide-connected"></i></div>
+            <div>
+                <div class="rec-callout-title">B안 컨셉 — 단가가 아닌 "사용량·운영 방식"을 바꾼다</div>
+                <p class="rec-callout-text mb-0">
+                    인프라 외주비는 대부분 <strong>3년 약정</strong>이라 단가 협상이 어렵습니다.
+                    B안은 단가를 그대로 둔 채 <strong>FinOps (사용량 최적화)</strong> · <strong>내재화 (인소싱)</strong> ·
+                    <strong>매출연동(RS)</strong> · <strong>효율 극대화 (ROAS/LP 튜닝)</strong> 네 가지 레버로
+                    절감을 만들어냅니다. 협상 카드 없이 내부 통제만으로 실행 가능합니다.
+                </p>
+            </div>
+        </div>
+
+        <!-- 목표 배너 -->
+        <div class="goal-banner theme-b mb-3">
+            <div class="goal-banner-title">
+                <i class="bi bi-bullseye"></i> 비용절감 목표
+            </div>
+            <div class="goal-banner-items">
+                <div class="goal-pill">
+                    <span class="goal-pill-num">3개월 내 5%</span>
+                    <span class="goal-pill-sub">월 약 {{ short(target3) }} 절감</span>
+                </div>
+                <div class="goal-pill">
+                    <span class="goal-pill-num">6개월 내 10%</span>
+                    <span class="goal-pill-sub">월 약 {{ short(target6) }} 절감</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-lg-4">
+                <div class="card kpi-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">분석 대상 월평균 비용</div>
+                                <div class="kpi-value">{{ short(monthlyBase) }}</div>
+                                <div class="kpi-sub">1~5월 누적 {{ short(totalCost) }} 기준</div>
+                            </div>
+                            <div class="kpi-icon theme-b">
+                                <i class="bi bi-cash-stack"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-4">
+                <div class="card kpi-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">추천안 3개월 절감 (계획)</div>
+                                <div class="kpi-value text-success">{{ short(phase1Saving) }}</div>
+                                <div class="kpi-sub">절감률 {{ rate(phase1Rate) }} · 목표 5% 달성</div>
+                            </div>
+                            <div class="kpi-icon" style="background:#dcfce7;color:#059669;">
+                                <i class="bi bi-speedometer2"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-lg-4">
+                <div class="card kpi-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="kpi-label">추천안 6개월 절감 (계획)</div>
+                                <div class="kpi-value text-success">{{ short(totalSaving) }}</div>
+                                <div class="kpi-sub">절감률 {{ rate(totalRate) }} · 목표 10% 달성</div>
+                            </div>
+                            <div class="kpi-icon" style="background:#dcfce7;color:#059669;">
+                                <i class="bi bi-graph-down-arrow"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- A안 vs B안 차별점 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="card-title-sm d-flex justify-content-between align-items-center">
+                    <span>A안 vs B안 — 핵심 차별점</span>
+                    <button class="btn btn-link btn-sm text-decoration-none p-0" @click="goStrategyA">
+                        A안 보기 <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width:170px;">구분</th>
+                                <th>A안 — 계약 재편</th>
+                                <th>B안 — 운영 효율 <span class="badge bg-primary-subtle text-primary-emphasis ms-1">현재</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(r, i) in abCompare" :key="i">
+                                <td class="fw-semibold text-muted">{{ r.dim }}</td>
+                                <td><span class="small">{{ r.a }}</span></td>
+                                <td><span class="small fw-semibold text-theme-b">{{ r.b }}</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- B-1 · B-2 · B-3안 비교 -->
+        <div class="card-title-sm">B안 내부 비교 — B-1 · B-2 · B-3안</div>
+        <div class="row g-3 mb-2">
+            <div class="col-12 col-lg-4" v-for="p in plans" :key="p.id">
+                <div class="plan-card" :class="{ 'is-rec': p.recommended }">
+                    <div v-if="p.recommended" class="plan-ribbon">
+                        <i class="bi bi-star-fill"></i> 최적안
+                    </div>
+                    <div class="plan-head">
+                        <div class="plan-id">{{ p.id }}</div>
+                        <span class="plan-tag" :class="{ 'is-rec': p.recommended }">{{ p.tag }}</span>
+                    </div>
+                    <div class="plan-name">{{ p.name }}</div>
+                    <p class="plan-summary">{{ p.summary }}</p>
+
+                    <div class="plan-metrics">
+                        <div class="plan-metric">
+                            <div class="plan-metric-label">3개월 예상</div>
+                            <div class="plan-metric-val" :class="p.pass3 ? 'text-success' : 'text-danger'">
+                                {{ rate(p.m3) }}
+                            </div>
+                            <div class="plan-metric-chk">
+                                <i :class="p.pass3 ? 'bi bi-check-circle-fill text-success' : 'bi bi-x-circle-fill text-danger'"></i>
+                                목표 5%
+                            </div>
+                        </div>
+                        <div class="plan-metric">
+                            <div class="plan-metric-label">6개월 예상</div>
+                            <div class="plan-metric-val" :class="p.pass6 ? 'text-success' : 'text-danger'">
+                                {{ rate(p.m6) }}
+                            </div>
+                            <div class="plan-metric-chk">
+                                <i :class="p.pass6 ? 'bi bi-check-circle-fill text-success' : 'bi bi-x-circle-fill text-danger'"></i>
+                                목표 10%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="plan-list">
+                        <div class="plan-list-title text-success"><i class="bi bi-plus-circle"></i> 장점</div>
+                        <ul>
+                            <li v-for="(t, i) in p.pros" :key="'pro' + i">{{ t }}</li>
+                        </ul>
+                        <div class="plan-list-title text-danger"><i class="bi bi-dash-circle"></i> 단점</div>
+                        <ul>
+                            <li v-for="(t, i) in p.cons" :key="'con' + i">{{ t }}</li>
+                        </ul>
+                    </div>
+
+                    <div class="plan-verdict" :class="(p.pass3 && p.pass6) ? 'ok' : 'no'">
+                        <template v-if="p.pass3 && p.pass6">
+                            <i class="bi bi-check-circle-fill"></i> 3개월·6개월 목표 모두 달성
+                        </template>
+                        <template v-else>
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            {{ p.pass3 ? '6개월 목표 미달' : '3개월 목표 미달' }}
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 최적안 결론 -->
+        <div class="rec-callout mb-4">
+            <div class="rec-callout-icon"><i class="bi bi-trophy-fill"></i></div>
+            <div>
+                <div class="rec-callout-title">최적안 — B-3안 · 운영 효율 통합형 (FinOps + 인소싱)</div>
+                <p class="rec-callout-text mb-0">
+                    B-1안은 사용량 최적화로 빠르게 5%를 만들지만 6개월 10% 목표에 닿지 못하고,
+                    B-2안은 인소싱·RS 재편 효과가 큰 대신 초기 3개월에 효과가 미미합니다.
+                    <strong>B-3안</strong>은 Phase 1에서 <strong>FinOps·SaaS 좌석 풀·ROAS 튜닝</strong>으로
+                    <strong>{{ rate(phase1Rate) }}</strong>를 즉시 확보하고, Phase 2에서 <strong>라이트사이징·인소싱·매출연동(RS)</strong>를
+                    병행 착수해 6개월차에 누적 <strong>{{ rate(totalRate) }}</strong>로 두 목표를 모두 달성합니다.
+                    A안과 달리 <strong>외부 협상 카드 없이 내부 통제만으로 실행</strong> 가능한 게 핵심 강점입니다.
+                </p>
+            </div>
+        </div>
+
+        <!-- 추천안 절감 효과 (목표 대비) -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="card-title-sm">추천안(B-3안) 절감 효과 — 목표 대비 (월 기준)</div>
+
+                <div class="prog-row">
+                    <div class="prog-head">
+                        <span><span class="phase-dot p1"></span> 1단계 (1~3개월) · 사용량·운영 즉시 최적화</span>
+                        <span class="prog-amt">{{ comma(phase1Saving) }}원 / 월 &nbsp;<strong>{{ rate(phase1Rate) }}</strong></span>
+                    </div>
+                    <div class="prog-track">
+                        <div class="prog-fill p1" :style="{ width: scalePos(phase1Rate) }"></div>
+                        <div class="prog-mark" :style="{ left: scalePos(goal.m3) }" title="3개월 목표 5%">
+                            <span>목표 5%</span>
+                        </div>
+                        <div class="prog-mark" :style="{ left: scalePos(goal.m6) }" title="6개월 목표 10%">
+                            <span>목표 10%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="prog-row prog-row-last">
+                    <div class="prog-head">
+                        <span><span class="phase-dot p2"></span> 1+2단계 누적 (~6개월) · 인소싱·RS 재편 포함</span>
+                        <span class="prog-amt">{{ comma(totalSaving) }}원 / 월 &nbsp;<strong>{{ rate(totalRate) }}</strong></span>
+                    </div>
+                    <div class="prog-track">
+                        <div class="prog-fill p2" :style="{ width: scalePos(totalRate) }"></div>
+                        <div class="prog-mark" :style="{ left: scalePos(goal.m3) }"><span>목표 5%</span></div>
+                        <div class="prog-mark" :style="{ left: scalePos(goal.m6) }"><span>목표 10%</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 절감 레버별 + 로드맵 -->
+        <div class="row g-3 mb-4">
+            <div class="col-lg-5">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="card-title-sm">절감 레버별 절감액 (월 기준)</div>
+                        <div class="bar-row" v-for="r in byLever" :key="r.key">
+                            <div class="bar-label" :title="r.key">{{ r.key }}</div>
+                            <div class="bar-track">
+                                <div class="bar-fill green" :style="{ width: leverWidth(r.total) }"></div>
+                            </div>
+                            <div class="bar-value">{{ short(r.total) }}</div>
+                        </div>
+                        <p class="text-muted small mb-0 mt-2">
+                            * <strong>사용량 최적화</strong>가 가장 큰 비중 — 3년 약정 제약을 우회하는 핵심 레버입니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="card-title-sm">추천안 실행 로드맵</div>
+                        <div class="roadmap">
+                            <div class="roadmap-step" v-for="(s, i) in roadmap" :key="i">
+                                <div class="roadmap-node">{{ i + 1 }}</div>
+                                <div class="roadmap-body">
+                                    <div class="roadmap-when">
+                                        {{ s.month }}
+                                        <span class="roadmap-label">{{ s.label }}</span>
+                                    </div>
+                                    <ul class="roadmap-items">
+                                        <li v-for="(it, j) in s.items" :key="j">{{ it }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 실행 과제 상세 -->
+        <div class="card">
+            <div class="card-body">
+                <div class="card-title-sm">실행 과제 상세 — 단계별 · 절감 레버 표기</div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-expense align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>단계</th>
+                                <th>실행 과제</th>
+                                <th>절감 레버</th>
+                                <th>대상 비용</th>
+                                <th>난이도</th>
+                                <th>담당</th>
+                                <th class="num">월 예상 절감</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(it, i) in initiatives" :key="i">
+                                <td>
+                                    <span class="phase-badge" :class="'p' + it.phase">
+                                        {{ it.phase }}단계
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">{{ it.title }}</div>
+                                    <div class="small text-muted">{{ it.desc }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge rounded-pill" :class="leverBadgeClass(it.lever)">
+                                        {{ it.lever }}
+                                    </span>
+                                </td>
+                                <td><span class="small text-nowrap">{{ it.area }}</span></td>
+                                <td>
+                                    <span class="badge rounded-pill" :class="levelClass(it.level)">
+                                        {{ it.level }}
+                                    </span>
+                                </td>
+                                <td><span class="small text-nowrap">{{ it.owner }}</span></td>
+                                <td class="num fw-semibold text-success">{{ comma(it.monthly) }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-semibold">
+                                <td colspan="6" class="text-end">1단계 합계 (3개월 목표)</td>
+                                <td class="num text-success">{{ comma(phase1Saving) }}</td>
+                            </tr>
+                            <tr class="fw-semibold">
+                                <td colspan="6" class="text-end">1+2단계 누적 합계 (6개월 목표)</td>
+                                <td class="num text-success">{{ comma(totalSaving) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="text-end mt-3">
+                    <button class="btn btn-outline-secondary btn-sm me-2" @click="goStrategyA">
+                        <i class="bi bi-arrow-left me-1"></i>A안 비교 보기
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" @click="goExpenses">
+                        <i class="bi bi-table me-1"></i>비용 상세 데이터 보기
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </template>
+
+</div>

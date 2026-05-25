@@ -1,0 +1,667 @@
+/* ============================================================
+ * base.css — 맑은 비용절감 커스텀 스타일
+ * Bootstrap 5 우선, 최소한의 커스텀만 추가합니다.
+ * ============================================================ */
+
+:root {
+    --gs-primary: #2563eb;
+    --gs-ink: #1e293b;
+    --gs-muted: #64748b;
+    --gs-line: #e2e8f0;
+    --gs-bg: #f5f7fa;
+}
+
+body {
+    font-family: 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+    background-color: var(--gs-bg);
+    color: var(--gs-ink);
+}
+
+/* ---------- GNB ---------- */
+.gnb {
+    background: #fff;
+    border-bottom: 1px solid var(--gs-line);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .04);
+}
+.gnb-brand {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--gs-primary) !important;
+}
+.gnb-brand i { font-size: 1.4rem; }
+.gnb .nav-link { font-weight: 500; color: var(--gs-muted); }
+.gnb .nav-link.active,
+.gnb .nav-link:hover { color: var(--gs-primary); }
+
+/* ---------- 콘텐츠 영역 표준 너비 (CLAUDE.md 규칙 8) ---------- */
+.page-content {
+    padding-top: 1.75rem;
+    padding-bottom: 3rem;
+    min-height: calc(100vh - 120px);
+}
+.page-content > .container {
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+@media (min-width: 992px) {
+    .page-content > .container {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+
+/* ---------- 푸터 ---------- */
+.gnb-footer {
+    border-top: 1px solid var(--gs-line);
+    background: #fff;
+    padding: 1.1rem 0;
+    color: var(--gs-muted);
+    font-size: .85rem;
+}
+
+/* ---------- 페이지 헤더 ---------- */
+.page-head { margin-bottom: 1.5rem; }
+.page-head h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .25rem; }
+.page-head .lead-sub { color: var(--gs-muted); font-size: .9rem; margin: 0; }
+
+/* ---------- 카드 공통 ---------- */
+.card { border: 1px solid var(--gs-line); border-radius: 12px; }
+.card-title-sm {
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--gs-muted);
+    letter-spacing: .02em;
+    margin-bottom: .85rem;
+}
+
+/* ---------- KPI 카드 ---------- */
+.kpi-card { height: 100%; }
+.kpi-card .kpi-label { font-size: .82rem; color: var(--gs-muted); }
+.kpi-card .kpi-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+.kpi-card .kpi-sub { font-size: .78rem; color: var(--gs-muted); }
+.kpi-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem;
+}
+
+/* ---------- 가로 막대 차트 ---------- */
+.bar-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 110px;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 11px;
+}
+.bar-label {
+    font-size: .85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bar-track {
+    background: #eef1f5;
+    border-radius: 6px;
+    height: 22px;
+    overflow: hidden;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    min-width: 3px;
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+    transition: width .5s ease;
+}
+.bar-fill.green { background: linear-gradient(90deg, #34d399, #059669); }
+.bar-fill.amber { background: linear-gradient(90deg, #fbbf24, #d97706); }
+.bar-value {
+    text-align: right;
+    font-size: .85rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+@media (max-width: 575px) {
+    .bar-row { grid-template-columns: 104px 1fr 84px; gap: 8px; }
+    .bar-value { font-size: .78rem; }
+}
+
+/* ---------- 월별 세로 막대 차트 ---------- */
+.vchart { display: flex; gap: 8px; align-items: flex-end; height: 218px; padding-top: 8px; }
+.vchart-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.vchart-bars { display: flex; gap: 5px; align-items: flex-end; height: 180px; width: 100%; justify-content: center; }
+.vbar { width: 30%; max-width: 28px; border-radius: 4px 4px 0 0; min-height: 3px; transition: height .5s ease; }
+.vbar.rev { background: #2563eb; }
+.vbar.cost { background: #f59e0b; }
+.vchart-x { font-size: .78rem; color: var(--gs-muted); margin-top: 6px; }
+.legend { display: flex; gap: 1rem; font-size: .8rem; color: var(--gs-muted); }
+.legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+
+/* ---------- 예측·전략 수행 표 ---------- */
+/* table-layout: fixed + colgroup 으로 두 표 컬럼 정렬을 일치시킴 */
+.fc-table { font-size: .8rem; table-layout: fixed; width: 100%; min-width: 1730px; }
+.fc-table th {
+    white-space: nowrap;
+    color: var(--gs-muted);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+}
+.fc-table th.num, .fc-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.fc-table th.fc-name, .fc-table td.fc-name { text-align: left; }
+.fc-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-stage { display: block; font-size: .68rem; color: var(--gs-primary); font-weight: 600; }
+/* 전체 비용·소계 강조 행 */
+.fc-table tr.fc-head td, .fc-table tr.fc-sub td { font-weight: 700; background: #eef4ff; }
+/* 세부 항목 들여쓰기 */
+.fc-table tr.fc-item td.fc-name { padding-left: 1.5rem; color: var(--gs-muted); }
+/* 예측치(5월 이후) = 회색 */
+.fc-table td.fc-forecast { color: #94a3b8; }
+/* 평균·합계·비중 집계 컬럼 */
+.fc-table th.fc-agg, .fc-table td.fc-agg { background: #f1f5f9; }
+.fc-table tr.fc-head td.fc-agg, .fc-table tr.fc-sub td.fc-agg { background: #e0e9fb; }
+/* 절감율 표기 (▼ 절감 / ▲ 증가) */
+.fc-save { margin-left: 4px; font-size: .7rem; }
+.fc-table .down { color: #059669; }
+.fc-table .up { color: #dc2626; }
+.fc-table tr.fc-saverow td { background: #f0fdf4; font-weight: 600; }
+.fc-table tr.fc-saverow td.fc-name { color: var(--gs-ink); }
+
+/* ---------- 데이터 테이블 ---------- */
+.table-expense { font-size: .86rem; }
+.table-expense th { white-space: nowrap; color: var(--gs-muted); font-weight: 600; }
+.table-expense td.num, .table-expense th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.table-expense tbody tr:hover { background: #f8fafc; }
+
+/* 컬럼 너비: 비용성격·절감가능여부는 최소, 분류·부서는 내용에 맞춤, 절감(메모)은 넓게 */
+.table-expense th.col-sm, .table-expense td.col-sm { width: 1%; }
+.table-expense th.col-cat, .table-expense td.col-cat { min-width: 165px; }
+.table-expense th.col-dept, .table-expense td.col-dept { min-width: 86px; }
+.table-expense th.col-saving, .table-expense td.col-saving { min-width: 118px; }
+.table-expense th.col-detail, .table-expense td.col-detail { min-width: 220px; }
+.table-expense th.col-memo, .table-expense td.col-memo { min-width: 400px; }
+
+/* 절감가능여부 강조 (O = 연한 노란색, 세모 = 연한 빨간색, X = 연한 회색) */
+.table-expense tbody tr.row-reduce-o > td { background-color: #fef9c3; }
+.table-expense tbody tr.row-reduce-o:hover > td { background-color: #fdf2a8; }
+.table-expense tbody tr.row-reduce-sam > td { background-color: #fde4e4; }
+.table-expense tbody tr.row-reduce-sam:hover > td { background-color: #fbd0d0; }
+.table-expense tbody tr.row-reduce-x > td { background-color: #f1f3f5; }
+.table-expense tbody tr.row-reduce-x:hover > td { background-color: #e9ecef; }
+
+/* 컬럼 헤더 고정 + 세로 스크롤 영역 */
+.page-content:has(.expenses-page) { padding-top: .85rem; }
+.expense-scroll { max-height: calc(100vh - 220px); overflow: auto; }
+.expense-scroll thead th { position: sticky; z-index: 4; }
+.expense-scroll .month-sum-row th { top: 0; height: 30px; }
+.expense-scroll .col-head-row th {
+    top: 30px;
+    background: #fff;
+    box-shadow: inset 0 -1px 0 var(--gs-line);
+}
+
+/* 담당부서 복수 선택 (드롭다운 버튼) */
+.dept-select {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    font-size: .82rem;
+    padding: .2rem .4rem;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    background: #fff;
+    color: var(--gs-ink);
+    cursor: pointer;
+    line-height: 1.5;
+}
+.dept-select.is-empty { background: #eef0f3; }
+.dept-select .dept-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dept-select .bi { flex: none; font-size: .68rem; color: var(--gs-muted); }
+
+.dept-dd {
+    width: 168px;
+    background: #fff;
+    border: 1px solid var(--gs-line);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .22);
+    padding: .55rem;
+    z-index: 1085;
+}
+.dept-dd .form-check { margin-bottom: .1rem; min-height: auto; }
+.dept-dd .form-check-label { font-size: .82rem; }
+.dept-dd-actions { display: flex; gap: .35rem; margin-top: .5rem; }
+.dept-dd-actions .btn { flex: 1; font-size: .76rem; }
+
+/* 절감 방안 셀 (입력 + 상세 버튼) */
+.memo-cell { display: flex; align-items: center; gap: 4px; }
+.memo-cell .memo-input { flex: 1; }
+.memo-expand {
+    flex: none;
+    padding: .15rem .4rem;
+    border: 1px solid var(--gs-line);
+    color: var(--gs-muted);
+    background: #fff;
+}
+.memo-expand:hover { color: var(--gs-primary); border-color: var(--gs-primary); }
+
+/* 절감 방안 상세 팝업 */
+.memo-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    background: rgba(15, 23, 42, .5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.memo-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 560px;
+    padding: 1.25rem 1.35rem;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, .4);
+}
+
+/* ---------- 로그인 (비밀번호 게이트) ---------- */
+.login-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb 55%, #0ea5e9);
+}
+.login-card {
+    width: 100%;
+    max-width: 400px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 2.25rem 2rem;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, .35);
+}
+.login-card .login-logo {
+    font-size: 2.2rem;
+    color: var(--gs-primary);
+    text-align: center;
+}
+.login-card h1 { font-size: 1.3rem; font-weight: 700; text-align: center; margin-top: .5rem; }
+.login-card .login-desc { text-align: center; color: var(--gs-muted); font-size: .85rem; margin-bottom: 1.5rem; }
+
+/* ---------- 엑셀형 컬럼 필터 ---------- */
+.table-expense th { vertical-align: middle; }
+.th-inner {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+}
+.num .th-inner { justify-content: flex-end; }
+.filter-btn {
+    border: 0;
+    background: transparent;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: #94a3b8;
+    cursor: pointer;
+    line-height: 1;
+    font-size: .78rem;
+    flex: none;
+}
+.filter-btn:hover { background: #e2e8f0; color: #475569; }
+.filter-btn.active { color: #fff; background: var(--gs-primary); }
+
+.col-filter {
+    width: 250px;
+    background: #fff;
+    border: 1px solid var(--gs-line);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .22);
+    padding: .65rem;
+    z-index: 1080;
+}
+.col-filter .cf-sort { display: flex; gap: .35rem; margin-bottom: .5rem; }
+.col-filter .cf-sort .btn { flex: 1; font-size: .76rem; }
+.col-filter .cf-list {
+    max-height: 210px;
+    overflow-y: auto;
+    margin-top: .35rem;
+    padding-right: 2px;
+}
+.col-filter .form-check { margin-bottom: .1rem; min-height: auto; }
+.col-filter .form-check-label {
+    font-size: .82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 195px;
+}
+.col-filter .cf-actions { display: flex; gap: .35rem; margin-top: .5rem; }
+.col-filter .cf-actions .btn { flex: 1; font-size: .76rem; }
+
+/* 인라인 편집 입력칸 (분류·비용성격·부서·절감가능여부·절감) */
+.cell-input { font-size: .82rem; }
+/* 입력칸이 셀 너비에 맞춰 줄어들도록 (min-width:0) */
+.table-expense .cell-input { width: 100%; min-width: 0; }
+
+/* 입력되지 않은 입력칸 = 연한 그레이 */
+.cell-input:placeholder-shown { background-color: #eef0f3; }
+
+/* 절감 레버 드롭다운 */
+.lever-select { font-size: .82rem; min-width: 108px; }
+.lever-select.is-empty { background-color: #eef0f3; }
+
+/* 절감가능여부 (아이콘 드롭다운) */
+.reduce-btn {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: .22rem .3rem;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    background: #fff;
+    cursor: pointer;
+    line-height: 1;
+}
+.reduce-btn.is-empty { background: #eef0f3; }
+.reduce-btn .reduce-ic { font-size: .98rem; }
+.reduce-btn .reduce-caret { font-size: .58rem; color: var(--gs-muted); }
+
+.reduce-dd {
+    min-width: 124px;
+    background: #fff;
+    border: 1px solid var(--gs-line);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .22);
+    padding: .3rem;
+    z-index: 1085;
+}
+.reduce-dd-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    width: 100%;
+    padding: .35rem .55rem;
+    border: 0;
+    background: transparent;
+    border-radius: 6px;
+    font-size: .84rem;
+    cursor: pointer;
+    text-align: left;
+}
+.reduce-dd-item:hover { background: #f1f5f9; }
+.reduce-dd-item.active { background: #e0e7ff; font-weight: 600; }
+.reduce-dd-item i { font-size: 1rem; width: 1rem; text-align: center; }
+
+/* 월별 합계 헤더 행 */
+.table-expense .month-sum-row th {
+    font-weight: 700;
+    font-size: .76rem;
+    color: var(--gs-primary);
+    background: #eef4ff;
+    border-bottom: 0;
+    white-space: nowrap;
+}
+
+/* ============================================================
+ * 절감 전략 페이지 (strategy)
+ * ============================================================ */
+
+/* ---------- 목표 배너 ---------- */
+.goal-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+    background: linear-gradient(135deg, #1e3a8a, #2563eb 60%, #0ea5e9);
+    color: #fff;
+    border-radius: 12px;
+    padding: 1.1rem 1.4rem;
+}
+.goal-banner-title { font-weight: 700; font-size: 1rem; white-space: nowrap; }
+.goal-banner-title i { margin-right: .35rem; }
+.goal-banner-items { display: flex; flex-wrap: wrap; gap: .75rem; }
+.goal-pill {
+    background: rgba(255, 255, 255, .15);
+    border: 1px solid rgba(255, 255, 255, .25);
+    border-radius: 9px;
+    padding: .5rem .9rem;
+}
+.goal-pill-num { display: block; font-weight: 700; font-size: 1.02rem; }
+.goal-pill-sub { display: block; font-size: .78rem; opacity: .85; }
+
+/* ---------- 절감안 카드 (1·2·3안) ---------- */
+.plan-card {
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid var(--gs-line);
+    border-radius: 12px;
+    padding: 1.2rem;
+}
+.plan-card.is-rec {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+.plan-ribbon {
+    position: absolute;
+    top: -11px;
+    left: 1.2rem;
+    background: #2563eb;
+    color: #fff;
+    font-size: .74rem;
+    font-weight: 700;
+    padding: .15rem .6rem;
+    border-radius: 6px;
+}
+.plan-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .3rem;
+}
+.plan-id { font-size: 1.15rem; font-weight: 700; color: var(--gs-primary); }
+.plan-tag {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--gs-muted);
+    background: #eef1f5;
+    border-radius: 5px;
+    padding: .15rem .5rem;
+}
+.plan-tag.is-rec { color: #fff; background: #2563eb; }
+.plan-name { font-weight: 700; font-size: 1.05rem; margin-bottom: .35rem; }
+.plan-summary { font-size: .85rem; color: var(--gs-muted); margin-bottom: .9rem; }
+
+.plan-metrics { display: flex; gap: .6rem; margin-bottom: .9rem; }
+.plan-metric {
+    flex: 1;
+    background: var(--gs-bg);
+    border-radius: 9px;
+    padding: .6rem;
+    text-align: center;
+}
+.plan-metric-label { font-size: .74rem; color: var(--gs-muted); }
+.plan-metric-val { font-size: 1.35rem; font-weight: 700; line-height: 1.25; }
+.plan-metric-chk { font-size: .73rem; color: var(--gs-muted); }
+
+.plan-list { flex: 1; }
+.plan-list-title {
+    font-size: .8rem;
+    font-weight: 700;
+    margin: .35rem 0 .15rem;
+}
+.plan-list ul {
+    margin: 0 0 .3rem;
+    padding-left: 1.05rem;
+    font-size: .82rem;
+    color: var(--gs-ink);
+}
+.plan-list li { margin-bottom: .12rem; }
+
+.plan-verdict {
+    margin-top: .7rem;
+    border-radius: 8px;
+    padding: .5rem .7rem;
+    font-size: .82rem;
+    font-weight: 600;
+}
+.plan-verdict.ok { background: #dcfce7; color: #047857; }
+.plan-verdict.no { background: #fef3c7; color: #b45309; }
+
+/* ---------- 최적안 결론 콜아웃 ---------- */
+.rec-callout {
+    display: flex;
+    gap: 1rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid #2563eb;
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem;
+}
+.rec-callout-icon { font-size: 1.7rem; color: #2563eb; line-height: 1; }
+.rec-callout-title { font-weight: 700; font-size: 1rem; margin-bottom: .3rem; }
+.rec-callout-text { font-size: .88rem; color: var(--gs-ink); }
+
+/* ---------- 목표 대비 진행 막대 ---------- */
+.prog-row { margin-bottom: 2.4rem; }
+.prog-row-last { margin-bottom: .6rem; }
+.prog-head {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: .25rem;
+    font-size: .85rem;
+    margin-bottom: .4rem;
+}
+.prog-amt { font-variant-numeric: tabular-nums; color: var(--gs-muted); }
+.prog-amt strong { color: #059669; }
+.prog-track {
+    position: relative;
+    background: #eef1f5;
+    border-radius: 7px;
+    height: 26px;
+}
+.prog-fill {
+    height: 100%;
+    max-width: 100%;
+    border-radius: 7px;
+    transition: width .6s ease;
+}
+.prog-fill.p1 { background: linear-gradient(90deg, #34d399, #059669); }
+.prog-fill.p2 { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+.prog-mark {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 0;
+    border-left: 2px dashed #94a3b8;
+}
+.prog-mark span {
+    position: absolute;
+    bottom: -21px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--gs-muted);
+    white-space: nowrap;
+}
+.phase-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+.phase-dot.p1 { background: #059669; }
+.phase-dot.p2 { background: #1d4ed8; }
+
+/* ---------- 실행 로드맵 타임라인 ---------- */
+.roadmap { position: relative; padding-left: .25rem; }
+.roadmap-step {
+    position: relative;
+    display: flex;
+    gap: .85rem;
+    padding-bottom: 1.1rem;
+}
+.roadmap-step:last-child { padding-bottom: 0; }
+.roadmap-step::before {
+    content: "";
+    position: absolute;
+    left: 13px;
+    top: 28px;
+    bottom: 0;
+    width: 2px;
+    background: var(--gs-line);
+}
+.roadmap-step:last-child::before { display: none; }
+.roadmap-node {
+    flex: none;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+.roadmap-when { font-weight: 700; font-size: .9rem; margin-bottom: .2rem; }
+.roadmap-label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: #2563eb;
+    background: #dbeafe;
+    border-radius: 5px;
+    padding: .1rem .45rem;
+    margin-left: .35rem;
+}
+.roadmap-items {
+    margin: 0;
+    padding-left: 1.05rem;
+    font-size: .84rem;
+    color: var(--gs-ink);
+}
+.roadmap-items li { margin-bottom: .1rem; }
+
+/* ---------- 단계 배지 ---------- */
+.phase-badge {
+    display: inline-block;
+    font-size: .74rem;
+    font-weight: 700;
+    border-radius: 5px;
+    padding: .1rem .45rem;
+    white-space: nowrap;
+}
+.phase-badge.p1 { background: #dcfce7; color: #047857; }
+.phase-badge.p2 { background: #dbeafe; color: #1d4ed8; }
+
+/* ============================================================
+ * B안 페이지 (운영 효율 — 보라 톤)
+ * ============================================================ */
+.goal-banner.theme-b {
+    background: linear-gradient(135deg, #4c1d95, #7c3aed 60%, #a855f7);
+}
+.rec-callout.theme-b {
+    background: #f5f3ff;
+    border-color: #ddd6fe;
+    border-left-color: #7c3aed;
+}
+.rec-callout.theme-b .rec-callout-icon { color: #7c3aed; }
+.kpi-icon.theme-b { background: #ede9fe; color: #7c3aed; }
+.text-theme-b { color: #6d28d9; }

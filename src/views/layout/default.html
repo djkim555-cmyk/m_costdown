@@ -1,0 +1,50 @@
+<nav class="navbar navbar-expand-lg gnb">
+    <div class="container-fluid px-3 px-lg-4">
+        <a class="navbar-brand gnb-brand" href="#/home">
+            <i class="bi bi-piggy-bank-fill"></i>
+            <span>맑은 비용절감</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#gnbNav" aria-controls="gnbNav"
+                aria-expanded="false" aria-label="메뉴 열기">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="gnbNav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" :class="{ active: currentRoute === 'home' }" href="#/home">대시보드</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" :class="{ active: currentRoute === 'expenses' }" href="#/expenses">비용 상세</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" :class="{ active: currentRoute === 'strategy' }" href="#/strategy">절감 전략 A안</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" :class="{ active: currentRoute === 'strategy-b' }" href="#/strategy-b">절감 전략 B안</a>
+                </li>
+            </ul>
+
+            <div class="d-flex">
+                <button v-if="loggedIn" class="btn btn-outline-secondary btn-sm" @click="doLogout">
+                    <i class="bi bi-box-arrow-right me-1"></i>로그아웃
+                </button>
+                <a v-else class="btn btn-primary btn-sm" href="#/login">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>로그인
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="page-content">
+    {{ content }}
+</main>
+
+<footer class="gnb-footer">
+    <div class="container-fluid px-3 px-lg-4">
+        © 2026 맑은소프트 · 전사 비용절감 전략 프로젝트
+    </div>
+</footer>

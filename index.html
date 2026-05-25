@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>맑은 비용절감</title>
+    <meta name="description" content="맑은소프트 전사 비용절감 전략 대시보드">
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <!-- Noto Sans KR 폰트 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/base.css">
+</head>
+<body>
+    <div id="app"></div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- App utilities (window.GS) -->
+    <script src="/js/gs-utils.js"></script>
+
+    <!-- ViewLogic Router -->
+    <script src="https://cdn.jsdelivr.net/npm/viewlogic@latest/dist/viewlogic-router.min.js"></script>
+
+    <script>
+        // ============================================================
+        // 페이지 진입 비밀번호 (회원가입 없음)
+        // 변경 방법은 docs/pw.md 문서를 참고하세요.
+        // ============================================================
+        window.APP_PASSWORD = 'malgn2026';
+
+        // ViewLogic Router 초기화
+        const router = new ViewLogicRouter({
+            basePath: '/',
+            srcPath: '/src',
+            mode: 'hash',
+            environment: 'development',
+
+            // 비밀번호 게이트 (login 페이지 외 모든 페이지 보호)
+            auth: true,
+            loginRoute: 'login',
+            publicRoutes: ['login'],
+            protectedRoutes: [],
+            redirectAfterLogin: 'home',
+            authStorage: 'sessionStorage',
+        });
+
+        // 전역 설정
+        window.APP_NAME = '맑은 비용절감';
+        window.APP_VERSION = '1.0.0';
+
+        console.log('%c💰 맑은 비용절감', 'font-size: 20px; font-weight: bold; color: #0d6efd;');
+        console.log('%c맑은소프트 전사 비용절감 전략 대시보드', 'color: #10b981;');
+        console.log('Version:', window.APP_VERSION);
+    </script>
+</body>
+</html>
