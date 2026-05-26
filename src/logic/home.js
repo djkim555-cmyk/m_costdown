@@ -16,6 +16,7 @@ export default {
             const [items, forecast] = await Promise.all([
                 fetch('/data/cost-items.json').then((r) => r.json()),
                 fetch('/data/forecast.json').then((r) => r.json()),
+                window.GS.ensureExpenseEdits(),
             ]);
             this.items = window.GS.applyExpenseEdits(items);
             this.tables = forecast.tables || [];

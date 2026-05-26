@@ -5,6 +5,70 @@
 (function (window) {
     'use strict';
 
+    // ── API 베이스 ───────────────────────────────────────────────
+    //   · Cloudflare Pages 배포 / wrangler pages dev / node server.js
+    //     → 정적 + Functions(또는 Express) 가 동일 출처에서 함께 서빙되므로 빈 문자열
+    //   · Live Server(5500/5501)·python http.server(8000) 등 정적 전용 dev 서버
+    //     → 별도로 띄운 localhost:3001 (node server.js) 의 API 로 호출
+    const STATIC_ONLY_PORTS = new Set(['5500', '5501', '8000']);
+    const API_BASE = STATIC_ONLY_PORTS.has(location.port) ? 'http://localhost:3001' : '';
+
+    // 비용 편집값 필드 목록 (서버 스키마와 1:1)
+    const EDIT_FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'splits'];
+
+    // 구버전 localStorage 키 (마이그레이션 + 오프라인 폴백용)
+    const LEGACY_KEYS = {
+        category: 'gs-expense-cats',
+        lever: 'gs-expense-lever',
+        dept: 'gs-expense-depts',
+        reducible: 'gs-expense-reducible',
+        memo: 'gs-expense-memos',
+        saving: 'gs-expense-saving',
+        splits: 'gs-expense-splits',
+    };
+
+    function emptyEdits() {
+        const o = {};
+        for (const f of EDIT_FIELDS) o[f] = {};
+        return o;
+    }
+
+    function loadFromLocalStorage() {
+        const out = emptyEdits();
+        for (const f of EDIT_FIELDS) {
+            try {
+                out[f] = JSON.parse(localStorage.getItem(LEGACY_KEYS[f]) || '{}') || {};
+            } catch (e) {
+                out[f] = {};
+            }
+        }
+        return out;
+    }
+
+    function hasAnyData(edits) {
+        if (!edits) return false;
+        for (const f of EDIT_FIELDS) {
+            if (edits[f] && Object.keys(edits[f]).length > 0) return true;
+        }
+        return false;
+    }
+
+    async function fetchEditsFromServer() {
+        const res = await fetch(API_BASE + '/api/edits');
+        if (!res.ok) throw new Error('GET /api/edits ' + res.status);
+        return await res.json();
+    }
+
+    async function postEditsToServer(edits) {
+        const res = await fetch(API_BASE + '/api/edits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(edits),
+        });
+        if (!res.ok) throw new Error('POST /api/edits ' + res.status);
+        return await res.json();
+    }
+
     const GS = {
         /** 숫자에 천단위 콤마 (예: 1234567 -> "1,234,567") */
         comma(n) {
@@ -51,32 +115,82 @@
                 .sort((a, b) => b.total - a.total);
         },
 
-        /** 비용 상세 페이지에서 인라인 편집되는 localStorage 키 목록 */
-        EXPENSE_KEYS: {
-            category: 'gs-expense-cats',
-            lever: 'gs-expense-lever',
-            dept: 'gs-expense-depts',
-            reducible: 'gs-expense-reducible',
-            memo: 'gs-expense-memos',
-            saving: 'gs-expense-saving',
-        },
+        /** API 베이스 URL (다른 logic 파일에서 직접 호출용) */
+        API_BASE,
 
-        /** localStorage 에서 비용 상세 편집값을 모두 로드 -> { category, lever, dept, ... } */
-        loadExpenseEdits() {
-            const out = {};
-            for (const k in GS.EXPENSE_KEYS) {
+        /** 편집 가능한 필드 목록 */
+        EDIT_FIELDS,
+
+        /** 서버에서 비용 편집값을 받아오고 메모리에 캐시.
+         *  최초 1회: 서버가 비어있고 localStorage 에 데이터가 있으면 자동 마이그레이션 */
+        async ensureExpenseEdits(force) {
+            if (!force && GS._editsLoaded) return GS._editsCache;
+            if (!force && GS._editsLoading) return GS._editsLoading;
+
+            GS._editsLoading = (async () => {
+                let serverEdits;
                 try {
-                    out[k] = JSON.parse(localStorage.getItem(GS.EXPENSE_KEYS[k]) || '{}');
+                    serverEdits = await fetchEditsFromServer();
                 } catch (e) {
-                    out[k] = {};
+                    console.warn('서버 연결 실패 — localStorage 폴백:', e);
+                    GS._editsCache = loadFromLocalStorage();
+                    GS._editsLoaded = true;
+                    GS._editsOffline = true;
+                    return GS._editsCache;
                 }
-            }
-            return out;
+
+                // 서버가 비어있고 localStorage 에 기존 데이터가 있으면 일회성 마이그레이션
+                if (!hasAnyData(serverEdits)) {
+                    const local = loadFromLocalStorage();
+                    if (hasAnyData(local)) {
+                        try {
+                            await postEditsToServer(local);
+                            serverEdits = local;
+                            console.log('[gs-utils] localStorage → 서버 마이그레이션 완료');
+                        } catch (e) {
+                            console.error('마이그레이션 실패:', e);
+                        }
+                    }
+                }
+
+                GS._editsCache = serverEdits;
+                GS._editsLoaded = true;
+                GS._editsOffline = false;
+                return GS._editsCache;
+            })();
+
+            try { return await GS._editsLoading; }
+            finally { GS._editsLoading = null; }
         },
 
-        /** 비용 상세 편집값을 items 배열에 병합 (다른 페이지에서 편집 결과를 반영할 때 사용) */
+        /** 현재 캐시된 편집값 (없으면 빈 객체).
+         *  비동기 로드 전에 호출하면 빈 값을 반환하므로 mount 시 ensureExpenseEdits() 선행 필요 */
+        getExpenseEdits() {
+            return GS._editsCache || emptyEdits();
+        },
+
+        /** 편집값 전체를 서버에 저장 + 메모리 캐시 갱신.
+         *  서버 실패 시 localStorage 폴백으로 저장 (오프라인 모드) */
+        async saveExpenseEdits(edits) {
+            GS._editsCache = edits;
+            try {
+                await postEditsToServer(edits);
+                GS._editsOffline = false;
+            } catch (e) {
+                console.error('서버 저장 실패, localStorage 폴백:', e);
+                GS._editsOffline = true;
+                for (const f of EDIT_FIELDS) {
+                    try { localStorage.setItem(LEGACY_KEYS[f], JSON.stringify(edits[f] || {})); }
+                    catch (_) { /* ignore */ }
+                }
+                throw e;
+            }
+        },
+
+        /** 현재 캐시된 편집값을 items 배열에 병합 (대시보드·월비용 순위 등에서 사용)
+         *  주의: 호출 전 ensureExpenseEdits() 가 완료되어야 정확한 값이 반영됨 */
         applyExpenseEdits(items) {
-            const e = GS.loadExpenseEdits();
+            const e = GS.getExpenseEdits();
             (items || []).forEach((it, idx) => {
                 if (it._id == null) it._id = idx;
                 const id = it._id;

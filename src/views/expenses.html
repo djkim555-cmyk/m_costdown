@@ -19,11 +19,16 @@
                     </div>
                     <div class="col-6 col-lg-3 small text-muted">
                         <strong class="text-dark">{{ filtered.length }}</strong>건
+                        <span v-if="offline" class="badge text-bg-warning ms-2" title="서버 연결이 끊겨 브라우저에만 임시 저장됩니다">
+                            <i class="bi bi-cloud-slash me-1"></i>오프라인
+                        </span>
                     </div>
                     <div class="col-6 col-lg-3 text-end">
-                        <button class="btn btn-primary btn-sm me-1" @click="applyUpdate"
-                                title="현재 편집 내용을 월비용 순위·대시보드에 반영">
-                            <i class="bi bi-arrow-up-circle me-1"></i>업데이트
+                        <button class="btn btn-primary btn-sm me-1" @click="saveAll"
+                                :disabled="saving"
+                                title="현재 편집 내용을 서버에 저장하고 대시보드·월비용 순위에 반영">
+                            <span v-if="saving" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-save me-1"></i>저장하기
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" @click="resetAll">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>필터 초기화
@@ -41,7 +46,7 @@
                         <thead>
                             <!-- 월별 합계 -->
                             <tr class="month-sum-row">
-                                <th colspan="8" class="text-end">합계 →</th>
+                                <th colspan="9" class="text-end">합계 →</th>
                                 <th>{{ comma(savingTotal()) }}</th>
                                 <th v-for="n in 12" :key="'ms' + n" class="num">{{ cell(monthTotal(n - 1)) }}</th>
                                 <th class="num">{{ comma(filteredTotal) }}</th>
@@ -62,70 +67,156 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in filtered" :key="row._id"
-                                :class="{ 'row-reduce-o': edits.reducible[row._id] === 'O', 'row-reduce-sam': edits.reducible[row._id] === '세모', 'row-reduce-x': edits.reducible[row._id] === 'X' }">
-                                <td><span class="text-nowrap">{{ row.item }}</span></td>
-                                <td class="col-cat">
-                                    <input type="text" class="form-control form-control-sm cell-input"
-                                           v-model="edits.category[row._id]" @change="saveEdit('category')"
-                                           placeholder=" ">
-                                </td>
-                                <td class="col-detail">{{ row.detail || '-' }}</td>
-                                <td><span class="small">{{ row.vendor || '-' }}</span></td>
-                                <td class="col-sm">
-                                    <select class="form-select form-select-sm lever-select"
-                                            :class="{ 'is-empty': !edits.lever[row._id] }"
-                                            v-model="edits.lever[row._id]" @change="saveEdit('lever')">
-                                        <option value="">–</option>
-                                        <option v-for="opt in leverOptions" :key="opt" :value="opt">{{ opt }}</option>
-                                    </select>
-                                </td>
-                                <td class="col-dept">
-                                    <button type="button" class="dept-select"
-                                            :class="{ 'is-empty': !deptArr(row._id).length }"
-                                            :title="deptArr(row._id).join(', ')"
-                                            @click.stop="openDeptDD(row._id, $event)">
-                                        <span class="dept-text">{{ deptArr(row._id).length ? deptArr(row._id).join(', ') : '–' }}</span>
-                                        <i class="bi bi-chevron-down"></i>
-                                    </button>
-                                </td>
-                                <td class="col-sm">
-                                    <button type="button" class="reduce-btn"
-                                            :class="{ 'is-empty': !edits.reducible[row._id] }"
-                                            @click.stop="openReduceDD(row._id, $event)">
-                                        <i class="reduce-ic" :class="reduceIcon(edits.reducible[row._id])"></i>
-                                        <i class="bi bi-chevron-down reduce-caret"></i>
-                                    </button>
-                                </td>
-                                <td class="col-memo">
-                                    <div class="memo-cell">
-                                        <input type="text" class="form-control form-control-sm cell-input memo-input"
-                                               v-model="edits.memo[row._id]" @change="saveEdit('memo')"
+                            <template v-for="row in filtered" :key="row._id">
+                                <tr :class="{ 'row-reduce-o': edits.reducible[row._id] === 'O', 'row-reduce-sam': edits.reducible[row._id] === '세모', 'row-reduce-x': edits.reducible[row._id] === 'X' }">
+                                    <td><span class="text-nowrap">{{ row.item }}</span></td>
+                                    <td class="col-cat">
+                                        <input type="text" class="form-control form-control-sm cell-input"
+                                               v-model="edits.category[row._id]" @change="saveEdit('category')"
                                                placeholder=" ">
-                                        <button v-if="(edits.memo[row._id] || '').length > 25" type="button"
-                                                class="btn btn-sm memo-expand" title="절감 방안 상세 보기"
-                                                @click="openMemo(row._id)">
-                                            <i class="bi bi-arrows-angle-expand"></i>
+                                    </td>
+                                    <td class="col-detail">{{ row.detail || '-' }}</td>
+                                    <td><span class="small">{{ row.vendor || '-' }}</span></td>
+                                    <td class="col-sm">
+                                        <select class="form-select form-select-sm lever-select"
+                                                :class="{ 'is-empty': !edits.lever[row._id] }"
+                                                v-model="edits.lever[row._id]" @change="saveEdit('lever')">
+                                            <option value="">–</option>
+                                            <option v-for="opt in leverOptions" :key="opt" :value="opt">{{ opt }}</option>
+                                        </select>
+                                    </td>
+                                    <td class="col-dept">
+                                        <button type="button" class="dept-select"
+                                                :class="{ 'is-empty': !deptArr(row._id).length }"
+                                                :title="deptArr(row._id).join(', ')"
+                                                @click.stop="openDeptDD(row._id, null, $event)">
+                                            <span class="dept-text">{{ deptArr(row._id).length ? deptArr(row._id).join(', ') : '–' }}</span>
+                                            <i class="bi bi-chevron-down"></i>
                                         </button>
-                                    </div>
-                                </td>
-                                <td class="col-saving">
-                                    <input type="text" class="form-control form-control-sm cell-input"
-                                           v-model="edits.saving[row._id]" @change="formatSaving(row._id)"
-                                           placeholder=" ">
-                                </td>
-                                <td v-for="n in 12" :key="n" class="num">{{ cell(row.months[n - 1]) }}</td>
-                                <td class="num fw-semibold">{{ comma(row.total) }}</td>
-                            </tr>
+                                    </td>
+                                    <td class="col-sm">
+                                        <button type="button" class="reduce-btn"
+                                                :class="{ 'is-empty': !edits.reducible[row._id] }"
+                                                @click.stop="openReduceDD(row._id, null, $event)">
+                                            <i class="reduce-ic" :class="reduceIcon(edits.reducible[row._id])"></i>
+                                            <i class="bi bi-chevron-down reduce-caret"></i>
+                                        </button>
+                                    </td>
+                                    <td class="col-memo">
+                                        <div class="memo-cell">
+                                            <input type="text" class="form-control form-control-sm cell-input memo-input"
+                                                   v-model="edits.memo[row._id]" @change="saveEdit('memo')"
+                                                   placeholder=" ">
+                                            <button type="button" class="btn btn-sm memo-expand"
+                                                    title="절감 방안 상세 보기"
+                                                    @click="openMemo(row._id, null)">
+                                                <i class="bi bi-arrows-angle-expand"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="col-branch">
+                                        <div class="branch-cell">
+                                            <span class="branch-parent-pct"
+                                                  :class="{ 'is-zero': parentBranchPercent(row._id) === 0, 'is-full': parentBranchPercent(row._id) === 100 }"
+                                                  :title="'원행 비율 — 분기 합 ' + splitPercentSum(row._id) + '% 를 제외한 나머지'">
+                                                원행 {{ parentBranchPercent(row._id) }}%
+                                            </span>
+                                            <button type="button" class="branch-add-btn"
+                                                    :title="'팀별로 비용 분기 추가'"
+                                                    :disabled="parentBranchPercent(row._id) <= 0"
+                                                    @click="addSplit(row._id)">
+                                                <i class="bi bi-plus-lg"></i>
+                                                <span class="branch-add-label">분기</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="col-saving">
+                                        <input type="text" class="form-control form-control-sm cell-input"
+                                               v-model="edits.saving[row._id]" @change="formatSaving(row._id)"
+                                               placeholder=" ">
+                                    </td>
+                                    <td v-for="n in 12" :key="n" class="num">{{ cell(row.months[n - 1]) }}</td>
+                                    <td class="num fw-semibold">{{ comma(row.total) }}</td>
+                                </tr>
+                                <!-- 분기 하위 행 — 부모 행과 동일한 편집 컨트롤 + 절감가능여부 배경색 적용 -->
+                                <tr v-for="(split, si) in splitArr(row._id)" :key="row._id + '-s' + si"
+                                    :class="['split-row', { 'row-reduce-o': split.reducible === 'O', 'row-reduce-sam': split.reducible === '세모', 'row-reduce-x': split.reducible === 'X' }]">
+                                    <td>
+                                        <div class="split-marker-cell">
+                                            <span class="split-marker">└ 분기</span>
+                                            <button type="button" class="split-del-btn" title="이 분기 행 삭제"
+                                                    @click="removeSplit(row._id, si)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="col-cat"><span class="split-sub">{{ edits.category[row._id] || row.category || '-' }}</span></td>
+                                    <td class="col-detail"><span class="split-sub">–</span></td>
+                                    <td><span class="split-sub">–</span></td>
+                                    <td class="col-sm">
+                                        <select class="form-select form-select-sm lever-select"
+                                                :class="{ 'is-empty': !split.lever }"
+                                                v-model="split.lever" @change="saveSplits">
+                                            <option value="">–</option>
+                                            <option v-for="opt in leverOptions" :key="opt" :value="opt">{{ opt }}</option>
+                                        </select>
+                                    </td>
+                                    <td class="col-dept">
+                                        <button type="button" class="dept-select"
+                                                :class="{ 'is-empty': !((split.dept || []).length) }"
+                                                :title="(split.dept || []).join(', ')"
+                                                @click.stop="openDeptDD(row._id, si, $event)">
+                                            <span class="dept-text">{{ (split.dept || []).length ? (split.dept || []).join(', ') : '–' }}</span>
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                    </td>
+                                    <td class="col-sm">
+                                        <button type="button" class="reduce-btn"
+                                                :class="{ 'is-empty': !split.reducible }"
+                                                @click.stop="openReduceDD(row._id, si, $event)">
+                                            <i class="reduce-ic" :class="reduceIcon(split.reducible)"></i>
+                                            <i class="bi bi-chevron-down reduce-caret"></i>
+                                        </button>
+                                    </td>
+                                    <td class="col-memo">
+                                        <div class="memo-cell">
+                                            <input type="text" class="form-control form-control-sm cell-input memo-input"
+                                                   v-model="split.memo" @change="saveSplits"
+                                                   placeholder=" ">
+                                            <button type="button" class="btn btn-sm memo-expand"
+                                                    title="절감 방안 상세 보기"
+                                                    @click="openMemo(row._id, si)">
+                                                <i class="bi bi-arrows-angle-expand"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="col-branch">
+                                        <div class="branch-edit">
+                                            <input type="number" class="form-control form-control-sm branch-pct"
+                                                   min="0" max="100" step="1"
+                                                   :value="split.percent"
+                                                   @input="onSplitPercent(row._id, si, $event)">
+                                            <span class="branch-unit">%</span>
+                                        </div>
+                                    </td>
+                                    <td class="col-saving">
+                                        <input type="text" class="form-control form-control-sm cell-input"
+                                               v-model="split.saving" @change="formatSplitSaving(row._id, si)"
+                                               placeholder=" ">
+                                    </td>
+                                    <td v-for="n in 12" :key="'sm' + n" class="num">{{ cell(splitMonth(row, split.percent, n - 1)) }}</td>
+                                    <td class="num">{{ comma(splitTotal(row, split.percent)) }}</td>
+                                </tr>
+                            </template>
                             <tr v-if="!filtered.length">
-                                <td colspan="22" class="text-center text-muted py-4">
+                                <td colspan="23" class="text-center text-muted py-4">
                                     조건에 해당하는 비용 항목이 없습니다.
                                 </td>
                             </tr>
                         </tbody>
                         <tfoot v-if="filtered.length">
                             <tr class="fw-semibold">
-                                <td colspan="21" class="text-end">합계</td>
+                                <td colspan="22" class="text-end">합계</td>
                                 <td class="num">{{ comma(filteredTotal) }}</td>
                             </tr>
                         </tfoot>
@@ -174,7 +265,7 @@
     <div v-if="deptDD.open" class="dept-dd" :style="deptDD.style" @click.stop>
         <div class="form-check" v-for="(opt, oi) in deptOptions" :key="oi">
             <input class="form-check-input" type="checkbox" :id="'dd-' + oi"
-                   :checked="deptArr(deptDD.rowId).includes(opt)" @change="toggleDept(opt)">
+                   :checked="ddDeptArr.includes(opt)" @change="toggleDept(opt)">
             <label class="form-check-label" :for="'dd-' + oi">{{ opt }}</label>
         </div>
         <div class="dept-dd-actions">
@@ -187,7 +278,7 @@
     <div v-if="reduceDD.open" class="reduce-dd" :style="reduceDD.style" @click.stop>
         <button v-for="opt in reducibleOpts" :key="opt.value" type="button"
                 class="reduce-dd-item"
-                :class="{ active: (edits.reducible[reduceDD.rowId] || '') === opt.value }"
+                :class="{ active: ddReducible === opt.value }"
                 @click="pickReduce(opt.value)">
             <i :class="['bi', opt.icon, opt.cls]"></i>
             <span>{{ opt.label }}</span>

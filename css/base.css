@@ -244,6 +244,48 @@ body {
 .table-expense th.col-saving, .table-expense td.col-saving { min-width: 118px; }
 .table-expense th.col-detail, .table-expense td.col-detail { min-width: 220px; }
 .table-expense th.col-memo, .table-expense td.col-memo { min-width: 400px; }
+.table-expense th.col-branch, .table-expense td.col-branch { min-width: 92px; width: 1%; white-space: nowrap; }
+
+/* 비용분기 — 원행 % 배지 + 분기 추가 버튼 (부모 행) */
+.branch-cell { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.branch-parent-pct {
+    display: inline-flex; align-items: center;
+    font-size: .76rem; font-weight: 600;
+    padding: .15rem .4rem; border-radius: .25rem;
+    background: #eef4ff; color: #1e40af; white-space: nowrap;
+}
+.branch-parent-pct.is-full { background: #f1f3f5; color: #6b7280; font-weight: 500; }
+.branch-parent-pct.is-zero { background: #fff5f5; color: #b91c1c; }
+
+.branch-add-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: .78rem; padding: .2rem .45rem;
+    border: 1px dashed #ced4da; border-radius: .25rem;
+    background: #fff; color: var(--gs-muted); cursor: pointer; line-height: 1.4;
+}
+.branch-add-btn:hover:not(:disabled) { border-color: var(--gs-primary, #0d6efd); color: var(--gs-primary, #0d6efd); background: #f8fbff; }
+.branch-add-btn:disabled { opacity: .45; cursor: not-allowed; }
+.branch-add-btn .bi { font-size: .76rem; }
+
+/* 비용분기 — 분기 행 (하위 행) */
+.table-expense tbody tr.split-row > td { background: #fafbff; }
+.table-expense tbody tr.split-row:hover > td { background: #f1f4ff; }
+.split-marker-cell { display: flex; align-items: center; gap: 6px; }
+.split-marker { padding-left: 10px; color: #6b7280; font-size: .82rem; }
+.split-sub { color: #9ca3af; }
+.split-del-btn {
+    flex: none; border: 1px solid #e5e7eb; background: #fff; color: #adb5bd;
+    line-height: 1; padding: 2px 6px; border-radius: .25rem; cursor: pointer;
+    font-size: .76rem;
+}
+.split-del-btn:hover { background: #fff5f5; border-color: #fecaca; color: #dc2626; }
+
+.branch-edit { display: inline-flex; align-items: center; gap: 2px; }
+.branch-pct {
+    width: 56px; text-align: right; font-variant-numeric: tabular-nums;
+    padding: .15rem .35rem; font-size: .82rem;
+}
+.branch-unit { color: var(--gs-muted); font-size: .78rem; }
 
 /* 절감가능여부 강조 (O = 연한 노란색, 세모 = 연한 빨간색, X = 하얀색) */
 .table-expense tbody tr.row-reduce-o > td { background-color: #fef9c3; }

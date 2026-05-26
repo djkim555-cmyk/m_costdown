@@ -1,0 +1,21 @@
+# Cloudflare Pages + Functions + D1 설정
+#
+# 최초 1회 셋업:
+#   1) npm install                       (wrangler 포함 의존성 설치)
+#   2) npx wrangler login                (Cloudflare 계정 로그인)
+#   3) npx wrangler d1 create malgn-costdown-edits
+#        → 출력에 표시되는 database_id 를 아래 [[d1_databases]] 의 database_id 에 채워 넣기
+#   4) npm run db:migrate:remote         (테이블 생성)
+#
+# 배포: GitHub 연결 후 Cloudflare Pages 대시보드에서 자동 배포
+# 로컬: npm run dev  →  http://localhost:8788
+name = "malgn-costdown"
+compatibility_date = "2025-01-01"
+pages_build_output_dir = "."
+
+# D1 (서버리스 SQLite) 바인딩 — Functions 내에서 env.DB 로 접근
+[[d1_databases]]
+binding = "DB"
+database_name = "malgn-costdown-edits"
+database_id = "fd1c35bc-a9b3-4b29-8243-be5ad6d573d9"
+migrations_dir = "migrations"

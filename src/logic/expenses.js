@@ -12,13 +12,12 @@ const REDUCIBLE_OPTS = [
 // 절감 레버 (전략 유형 대분류) 옵션
 const LEVER_OPTIONS = ['가격 인하', '사용량 절감', '통합', '대체', '제거', '구조·시점', '유지'];
 
-// 인라인 편집 컬럼별 localStorage 키 + 초기값 함수
+// 인라인 편집 컬럼별 초기값 함수 (서버에 해당 row 가 없을 때 채울 기본값)
 const STORES = {
-    category: { key: 'gs-expense-cats', init: (it) => it.category || '' },
-    lever: { key: 'gs-expense-lever', init: () => '' },
+    category: { init: (it) => it.category || '' },
+    lever: { init: () => '' },
     // 담당부서: 복수 선택 배열 (원본값이 옵션에 있으면 [값], 없으면 [])
     dept: {
-        key: 'gs-expense-depts',
         init: (it) => {
             const d = (it.dept || '').trim();
             return DEPT_OPTIONS.includes(d) ? [d] : [];
@@ -26,7 +25,6 @@ const STORES = {
     },
     // 절감가능여부: 원본값이 O/X/세모 일 때만 사용, 그 외는 미선택
     reducible: {
-        key: 'gs-expense-reducible',
         init: (it) => {
             const r = (it.reducible || '').trim();
             return (r === 'O' || r === 'X' || r === '세모') ? r : '';
@@ -34,15 +32,19 @@ const STORES = {
     },
     // 절감 메모: 원본값이 O/X/세모 가 아닌 설명성 텍스트면 메모로 보존
     memo: {
-        key: 'gs-expense-memos',
         init: (it) => {
             const r = (it.reducible || '').trim();
             return (r && r !== 'O' && r !== 'X' && r !== '세모') ? r : '';
         },
     },
     // 절감금액(E): 추정 절감액 (원본 데이터 없음 → 빈값)
-    saving: { key: 'gs-expense-saving', init: () => '' },
+    saving: { init: () => '' },
+    // 비용분기: 행을 팀별로 % 분기한 하위 행 목록 [{ dept, percent }]
+    splits: { init: () => [] },
 };
+
+// 인라인 편집 시 서버 PUSH 디바운스 (ms)
+const SAVE_DEBOUNCE_MS = 600;
 
 export default {
     layout: 'default',
@@ -62,7 +64,7 @@ export default {
         return {
             loaded: false,
             items: [],
-            edits: { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {} },
+            edits: { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, splits: {} },
             search: '',
             // 페이지 진입 시 기본 정렬: 항목 컬럼 오름차순
             sortKey: 'item',
@@ -71,12 +73,14 @@ export default {
             openCol: null,
             valSearch: '',
             dropStyle: {},
-            memoModal: { open: false, rowId: null, text: '' },
+            memoModal: { open: false, rowId: null, splitIdx: null, text: '' },
             updateMsg: '',
+            offline: false,
+            saving: false,
             deptOptions: DEPT_OPTIONS,
-            deptDD: { open: false, rowId: null, style: {} },
+            deptDD: { open: false, rowId: null, splitIdx: null, style: {} },
             reducibleOpts: REDUCIBLE_OPTS,
-            reduceDD: { open: false, rowId: null, style: {} },
+            reduceDD: { open: false, rowId: null, splitIdx: null, style: {} },
             leverOptions: LEVER_OPTIONS,
             columns: [
                 { key: 'item', label: '항목', type: 'text' },
@@ -87,6 +91,7 @@ export default {
                 { key: 'dept', label: '담당부서', type: 'text', cls: 'col-dept' },
                 { key: 'reducible', label: '절감가능여부', type: 'text', cls: 'col-sm' },
                 { key: 'memo', label: '절감 방안', type: 'text', cls: 'col-memo' },
+                { key: 'branch', label: '비용분기', type: 'text', filter: false, cls: 'col-branch' },
                 { key: 'saving', label: '절감금액(E)', type: 'text', filter: false, cls: 'col-saving' },
                 ...monthCols,
                 { key: 'total', label: '합계', type: 'num', filter: false },
@@ -100,8 +105,12 @@ export default {
             items.forEach((it, idx) => { it._id = idx; });
             this.items = items;
 
+            // 서버에서 편집값 로드 (최초 1회는 localStorage 마이그레이션도 처리됨)
+            const serverEdits = await window.GS.ensureExpenseEdits(true);
+            this.offline = !!window.GS._editsOffline;
+
             for (const col in STORES) {
-                this.edits[col] = this.loadStore(STORES[col].key, items, STORES[col].init);
+                this.edits[col] = this.mergeServerEdits(items, serverEdits[col] || {}, STORES[col].init);
             }
             // 담당부서: 구버전 문자열 데이터를 배열로 정규화
             for (const id in this.edits.dept) {
@@ -109,6 +118,13 @@ export default {
                 this.edits.dept[id] = Array.isArray(v)
                     ? v
                     : (typeof v === 'string' && DEPT_OPTIONS.includes(v) ? [v] : []);
+            }
+            // 비용분기: 구버전 split 항목을 전체 편집 필드를 가진 형태로 정규화
+            for (const id in this.edits.splits) {
+                const arr = this.edits.splits[id];
+                this.edits.splits[id] = Array.isArray(arr)
+                    ? arr.map((s) => this.normSplit(s))
+                    : [];
             }
         } catch (e) {
             console.error('비용 목록 데이터 로딩 실패:', e);
@@ -161,6 +177,28 @@ export default {
             const q = this.valSearch.trim().toLowerCase();
             return q ? all.filter((v) => v.label.toLowerCase().includes(q)) : all;
         },
+
+        // 담당부서 드롭다운이 가리키는 현재 부서 배열 (부모행 또는 분기행)
+        ddDeptArr() {
+            const { rowId, splitIdx } = this.deptDD;
+            if (rowId == null) return [];
+            if (splitIdx != null) {
+                const s = (this.edits.splits[rowId] || [])[splitIdx];
+                return (s && Array.isArray(s.dept)) ? s.dept : [];
+            }
+            return this.edits.dept[rowId] || [];
+        },
+
+        // 절감가능여부 드롭다운이 가리키는 현재 값 (부모행 또는 분기행)
+        ddReducible() {
+            const { rowId, splitIdx } = this.reduceDD;
+            if (rowId == null) return '';
+            if (splitIdx != null) {
+                const s = (this.edits.splits[rowId] || [])[splitIdx];
+                return (s && s.reducible) || '';
+            }
+            return this.edits.reducible[rowId] || '';
+        },
     },
 
     methods: {
@@ -191,14 +229,8 @@ export default {
             this.saveEdit('saving');
         },
 
-        // localStorage 값을 불러오고, 없으면 init 함수로 초기화
-        loadStore(storeKey, items, initFn) {
-            let saved = {};
-            try {
-                saved = JSON.parse(localStorage.getItem(storeKey) || '{}');
-            } catch (e) {
-                saved = {};
-            }
+        // 서버 편집값을 items 와 머지 — 서버에 키가 있으면 그 값, 없으면 initFn 기본값
+        mergeServerEdits(items, saved, initFn) {
             const result = {};
             for (const it of items) {
                 result[it._id] = (it._id in saved) ? saved[it._id] : initFn(it);
@@ -342,9 +374,16 @@ export default {
             this.openCol = null;
         },
 
-        // 절감 방안 상세 팝업
-        openMemo(id) {
-            this.memoModal = { open: true, rowId: id, text: this.edits.memo[id] || '' };
+        // 절감 방안 상세 팝업 (부모행 또는 분기행)
+        openMemo(id, splitIdx) {
+            let text = '';
+            if (splitIdx != null) {
+                const s = (this.edits.splits[id] || [])[splitIdx];
+                text = (s && s.memo) || '';
+            } else {
+                text = this.edits.memo[id] || '';
+            }
+            this.memoModal = { open: true, rowId: id, splitIdx: splitIdx == null ? null : splitIdx, text };
         },
 
         closeMemo() {
@@ -352,20 +391,29 @@ export default {
         },
 
         saveMemoModal() {
-            if (this.memoModal.rowId != null) {
-                this.edits.memo[this.memoModal.rowId] = this.memoModal.text;
+            const { rowId, splitIdx, text } = this.memoModal;
+            if (rowId == null) { this.memoModal.open = false; return; }
+            if (splitIdx != null) {
+                const arr = (this.edits.splits[rowId] || []).slice();
+                if (arr[splitIdx]) {
+                    arr[splitIdx] = { ...arr[splitIdx], memo: text };
+                    this.edits.splits[rowId] = arr;
+                    this.saveEdit('splits');
+                }
+            } else {
+                this.edits.memo[rowId] = text;
                 this.saveEdit('memo');
             }
             this.memoModal.open = false;
         },
 
-        // 담당부서 복수 선택 드롭다운
+        // 담당부서 복수 선택 드롭다운 (부모행 또는 분기행)
         deptArr(id) {
             return this.edits.dept[id] || [];
         },
 
-        openDeptDD(id, ev) {
-            if (this.deptDD.open && this.deptDD.rowId === id) {
+        openDeptDD(id, splitIdx, ev) {
+            if (this.deptDD.open && this.deptDD.rowId === id && this.deptDD.splitIdx === (splitIdx == null ? null : splitIdx)) {
                 this.deptDD.open = false;
                 return;
             }
@@ -379,40 +427,61 @@ export default {
             this.deptDD = {
                 open: true,
                 rowId: id,
+                splitIdx: splitIdx == null ? null : splitIdx,
                 style: { position: 'fixed', top: (rect.bottom + 4) + 'px', left: left + 'px' },
             };
         },
 
         toggleDept(opt) {
-            const id = this.deptDD.rowId;
-            if (id == null) return;
-            const arr = (this.edits.dept[id] || []).slice();
-            const i = arr.indexOf(opt);
-            if (i >= 0) arr.splice(i, 1);
-            else arr.push(opt);
-            this.edits.dept[id] = arr;
-            this.saveEdit('dept');
+            const { rowId, splitIdx } = this.deptDD;
+            if (rowId == null) return;
+            if (splitIdx != null) {
+                const arr = (this.edits.splits[rowId] || []).slice();
+                if (!arr[splitIdx]) return;
+                const dept = Array.isArray(arr[splitIdx].dept) ? arr[splitIdx].dept.slice() : [];
+                const i = dept.indexOf(opt);
+                if (i >= 0) dept.splice(i, 1);
+                else dept.push(opt);
+                arr[splitIdx] = { ...arr[splitIdx], dept };
+                this.edits.splits[rowId] = arr;
+                this.saveEdit('splits');
+            } else {
+                const arr = (this.edits.dept[rowId] || []).slice();
+                const i = arr.indexOf(opt);
+                if (i >= 0) arr.splice(i, 1);
+                else arr.push(opt);
+                this.edits.dept[rowId] = arr;
+                this.saveEdit('dept');
+            }
         },
 
         clearDept() {
-            const id = this.deptDD.rowId;
-            if (id == null) return;
-            this.edits.dept[id] = [];
-            this.saveEdit('dept');
+            const { rowId, splitIdx } = this.deptDD;
+            if (rowId == null) return;
+            if (splitIdx != null) {
+                const arr = (this.edits.splits[rowId] || []).slice();
+                if (!arr[splitIdx]) return;
+                arr[splitIdx] = { ...arr[splitIdx], dept: [] };
+                this.edits.splits[rowId] = arr;
+                this.saveEdit('splits');
+            } else {
+                this.edits.dept[rowId] = [];
+                this.saveEdit('dept');
+            }
         },
 
         closeDeptDD() {
             this.deptDD.open = false;
         },
 
-        // 절감가능여부 아이콘 드롭다운
+        // 절감가능여부 아이콘 드롭다운 (부모행 또는 분기행)
         reduceIcon(value) {
             const o = REDUCIBLE_OPTS.find((x) => x.value === (value || '')) || REDUCIBLE_OPTS[0];
             return ['bi', o.icon, o.cls];
         },
 
-        openReduceDD(id, ev) {
-            if (this.reduceDD.open && this.reduceDD.rowId === id) {
+        openReduceDD(id, splitIdx, ev) {
+            if (this.reduceDD.open && this.reduceDD.rowId === id && this.reduceDD.splitIdx === (splitIdx == null ? null : splitIdx)) {
                 this.reduceDD.open = false;
                 return;
             }
@@ -426,46 +495,174 @@ export default {
             this.reduceDD = {
                 open: true,
                 rowId: id,
+                splitIdx: splitIdx == null ? null : splitIdx,
                 style: { position: 'fixed', top: (rect.bottom + 4) + 'px', left: left + 'px' },
             };
         },
 
         pickReduce(value) {
-            const id = this.reduceDD.rowId;
-            if (id != null) {
-                this.edits.reducible[id] = value;
+            const { rowId, splitIdx } = this.reduceDD;
+            if (rowId == null) { this.reduceDD.open = false; return; }
+            if (splitIdx != null) {
+                const arr = (this.edits.splits[rowId] || []).slice();
+                if (arr[splitIdx]) {
+                    arr[splitIdx] = { ...arr[splitIdx], reducible: value };
+                    this.edits.splits[rowId] = arr;
+                    this.saveEdit('splits');
+                }
+            } else {
+                this.edits.reducible[rowId] = value;
                 this.saveEdit('reducible');
             }
             this.reduceDD.open = false;
         },
 
-        // 인라인 편집값을 localStorage 에 저장
-        saveEdit(col) {
+        // 인라인 편집값 변경 시 디바운스 후 서버에 자동 저장 (col 은 호환용, 사용 안 함)
+        saveEdit(_col) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = setTimeout(() => { this.pushToServer(false); }, SAVE_DEBOUNCE_MS);
+        },
+
+        // 현재 편집값 전체를 서버에 PUSH
+        async pushToServer(showToast) {
+            this.saving = true;
             try {
-                localStorage.setItem(STORES[col].key, JSON.stringify(this.edits[col]));
+                const payload = {};
+                for (const col in STORES) payload[col] = this.edits[col];
+                await window.GS.saveExpenseEdits(payload);
+                this.offline = false;
+                if (showToast) {
+                    this.updateMsg = '저장 완료 — 대시보드·월비용 순위·절감 전략 방안에 반영됩니다';
+                    clearTimeout(this._toastTimer);
+                    this._toastTimer = setTimeout(() => { this.updateMsg = ''; }, 2400);
+                }
+                window.dispatchEvent(new CustomEvent('gs-expense-edits-applied'));
             } catch (e) {
-                console.error('저장 실패:', col, e);
+                this.offline = true;
+                this.updateMsg = '서버 저장 실패 — 임시로 브라우저에만 저장되었습니다';
+                clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => { this.updateMsg = ''; }, 3500);
+            } finally {
+                this.saving = false;
             }
         },
 
-        // 업데이트: 현재 편집 내용을 확정 저장하고 다른 페이지(월비용 순위·대시보드)에 반영
-        applyUpdate() {
-            for (const col in STORES) {
-                try {
-                    localStorage.setItem(STORES[col].key, JSON.stringify(this.edits[col]));
-                } catch (e) {
-                    console.error('업데이트 저장 실패:', col, e);
-                }
+        // 저장하기 버튼: 디바운스 대기 중인 변경까지 즉시 flush
+        async saveAll() {
+            clearTimeout(this._saveTimer);
+            await this.pushToServer(true);
+        },
+
+        // ── 비용분기 ────────────────────────────────────────────────
+        // 행을 팀별 %로 쪼개 아래에 하위 행 추가, 분기 행도 부모 행과 동일한 항목 편집 가능
+        // 분기 행 삭제 시 부모 행 데이터는 절대 영향받지 않음
+
+        // 분기 항목 정규화 (구버전 데이터 호환)
+        normSplit(s) {
+            const obj = (s && typeof s === 'object') ? s : {};
+            let dept;
+            if (Array.isArray(obj.dept)) dept = obj.dept.filter((d) => DEPT_OPTIONS.includes(d));
+            else if (typeof obj.dept === 'string' && DEPT_OPTIONS.includes(obj.dept)) dept = [obj.dept];
+            else dept = [];
+            const r = obj.reducible;
+            return {
+                percent: Math.max(0, Math.min(100, Number(obj.percent) || 0)),
+                dept,
+                lever: typeof obj.lever === 'string' ? obj.lever : '',
+                reducible: (r === 'O' || r === 'X' || r === '세모') ? r : '',
+                memo: typeof obj.memo === 'string' ? obj.memo : '',
+                saving: typeof obj.saving === 'string' ? obj.saving
+                    : (typeof obj.saving === 'number' && obj.saving ? window.GS.comma(obj.saving) : ''),
+            };
+        },
+
+        splitArr(id) {
+            return this.edits.splits[id] || [];
+        },
+
+        // 현재 행의 분기 비율 총합 (%)
+        splitPercentSum(id) {
+            return (this.edits.splits[id] || []).reduce((s, x) => s + (Number(x.percent) || 0), 0);
+        },
+
+        // 원행의 비율 — 100% 에서 분기된 행들의 합을 뺀 잔여분 (원행 + 분기 합 = 100%)
+        parentBranchPercent(id) {
+            return Math.max(0, 100 - this.splitPercentSum(id));
+        },
+
+        // 새 분기 행 추가 — 부모 행의 값을 복사하여 채움, 남은 % 한도까지 자동 할당
+        addSplit(id) {
+            const arr = (this.edits.splits[id] || []).slice();
+            const used = arr.reduce((s, x) => s + (Number(x.percent) || 0), 0);
+            const remain = Math.max(0, 100 - used);
+            if (remain <= 0) {
+                this.updateMsg = '비율 합이 100%에 도달했습니다';
+                clearTimeout(this._toastTimer);
+                this._toastTimer = setTimeout(() => { this.updateMsg = ''; }, 1800);
+                return;
             }
-            try {
-                localStorage.setItem('gs-expense-applied-at', String(Date.now()));
-            } catch (e) { /* ignore */ }
+            // 부모 행의 값을 복사 (절감금액은 비율만큼 안분)
+            const parentSavingN = Number(String(this.edits.saving[id] || '').replace(/[^\d.-]/g, '')) || 0;
+            const splitSavingN = Math.round(parentSavingN * remain / 100);
+            arr.push(this.normSplit({
+                percent: remain,
+                dept: (this.edits.dept[id] || []).slice(),
+                lever: this.edits.lever[id] || '',
+                reducible: this.edits.reducible[id] || '',
+                memo: this.edits.memo[id] || '',
+                saving: splitSavingN ? window.GS.comma(splitSavingN) : '',
+            }));
+            this.edits.splits[id] = arr;
+            this.saveEdit('splits');
+        },
 
-            window.dispatchEvent(new CustomEvent('gs-expense-edits-applied'));
+        // 분기 행 삭제 — 부모 행은 그대로 유지 (원본 데이터는 손대지 않음)
+        removeSplit(id, idx) {
+            const arr = (this.edits.splits[id] || []).slice();
+            arr.splice(idx, 1);
+            this.edits.splits[id] = arr;
+            this.saveEdit('splits');
+        },
 
-            this.updateMsg = '업데이트 완료 — 월비용 순위·대시보드에 반영됩니다';
-            clearTimeout(this._toastTimer);
-            this._toastTimer = setTimeout(() => { this.updateMsg = ''; }, 2400);
+        // 분기 비율 입력 — 0~100 클램프 + 다른 분기들과의 합이 100을 넘지 않도록 제한
+        onSplitPercent(id, idx, ev) {
+            const arr = (this.edits.splits[id] || []).slice();
+            if (!arr[idx]) return;
+            let v = Number(ev.target.value);
+            if (!isFinite(v) || v < 0) v = 0;
+            if (v > 100) v = 100;
+            const otherSum = arr.reduce((s, x, i) => i === idx ? s : s + (Number(x.percent) || 0), 0);
+            if (otherSum + v > 100) v = Math.max(0, 100 - otherSum);
+            arr[idx] = { ...arr[idx], percent: v };
+            this.edits.splits[id] = arr;
+            ev.target.value = v;
+            this.saveEdit('splits');
+        },
+
+        // 분기 행 - 절감금액 입력값을 천단위 콤마로 정리 후 저장
+        formatSplitSaving(id, idx) {
+            const arr = (this.edits.splits[id] || []).slice();
+            if (!arr[idx]) return;
+            const n = Number(String(arr[idx].saving || '').replace(/[^\d.-]/g, '')) || 0;
+            arr[idx] = { ...arr[idx], saving: n ? window.GS.comma(n) : '' };
+            this.edits.splits[id] = arr;
+            this.saveEdit('splits');
+        },
+
+        // 분기 행 - 절감레버/메모 등 v-model 직접 변경 시 호출
+        saveSplits() {
+            this.saveEdit('splits');
+        },
+
+        // 분기 행에서 월 셀 값 (parent.months[idx] * percent / 100)
+        splitMonth(parentRow, percent, mIdx) {
+            const base = (parentRow.months || [])[mIdx] || 0;
+            return Math.round(base * (Number(percent) || 0) / 100);
+        },
+
+        // 분기 행에서 합계 값 (parent.total * percent / 100)
+        splitTotal(parentRow, percent) {
+            return Math.round((parentRow.total || 0) * (Number(percent) || 0) / 100);
         },
     },
 };

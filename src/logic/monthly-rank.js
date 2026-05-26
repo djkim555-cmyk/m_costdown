@@ -12,7 +12,10 @@ export default {
 
     async mounted() {
         try {
-            const items = await fetch('/data/cost-items.json').then((r) => r.json());
+            const [items] = await Promise.all([
+                fetch('/data/cost-items.json').then((r) => r.json()),
+                window.GS.ensureExpenseEdits(),
+            ]);
             this.items = window.GS.applyExpenseEdits(items);
         } catch (e) {
             console.error('비용항목 데이터 로딩 실패:', e);

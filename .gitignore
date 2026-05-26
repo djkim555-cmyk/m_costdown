@@ -21,3 +21,17 @@ npm-debug.log*
 # Python
 __pycache__/
 *.pyc
+
+# Node
+node_modules/
+
+# SQLite (local server.js)
+db/*.db
+db/*.db-journal
+db/*.db-wal
+db/*.db-shm
+db/*.sql
+
+# Wrangler / Cloudflare local state
+.wrangler/
+.dev.vars
