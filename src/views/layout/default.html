@@ -22,10 +22,10 @@
                 <li class="nav-item">
                     <a class="nav-link" :class="{ active: currentRoute === 'expenses' }" href="#/expenses">비용 상세</a>
                 </li>
-                <li class="nav-item">
+                <li v-if="showStrategy" class="nav-item">
                     <a class="nav-link" :class="{ active: currentRoute === 'strategy' }" href="#/strategy">절감 전략 A안</a>
                 </li>
-                <li class="nav-item">
+                <li v-if="showStrategy" class="nav-item">
                     <a class="nav-link" :class="{ active: currentRoute === 'strategy-b' }" href="#/strategy-b">절감 전략 B안</a>
                 </li>
             </ul>

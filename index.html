@@ -40,9 +40,15 @@
     <script>
         // ============================================================
         // 페이지 진입 비밀번호 (회원가입 없음)
+        // 비밀번호별로 권한(role)을 지정합니다.
+        //   full       — 전체 메뉴 (대시보드 / 월비용 순위 / 비용 상세 / 절감 전략 A안 / B안)
+        //   restricted — 전략 메뉴 숨김 (대시보드 / 월비용 순위 / 비용 상세만)
         // 변경 방법은 docs/pw.md 문서를 참고하세요.
         // ============================================================
-        window.APP_PASSWORD = 'malgncostdown';
+        window.APP_PASSWORDS = {
+            malgncostdown: 'full',
+            malgn2026: 'restricted',
+        };
 
         // ViewLogic Router 초기화
         const router = new ViewLogicRouter({

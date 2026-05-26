@@ -31,13 +31,16 @@ export default {
             // 입력 처리 UX를 위한 짧은 지연
             await new Promise((resolve) => setTimeout(resolve, 250));
 
-            if (this.password === window.APP_PASSWORD) {
+            const role = (window.APP_PASSWORDS || {})[this.password];
+            if (role) {
                 // ViewLogic 인증 토큰 발급 (sessionStorage 저장 → 보호 페이지 입장 허용)
                 if (typeof this.setToken === 'function') {
                     this.setToken('granted');
                 } else {
                     sessionStorage.setItem('authToken', 'granted');
                 }
+                // 권한 저장 — GNB 가 이 값을 보고 전략 메뉴 노출 여부를 결정
+                sessionStorage.setItem('authRole', role);
                 this.navigateTo('home');
             } else {
                 this.error = '비밀번호가 올바르지 않습니다.';
