@@ -7,10 +7,10 @@
     "start": "node server.js",
     "dev": "wrangler pages dev",
     "deploy": "wrangler pages deploy",
-    "db:create": "wrangler d1 create malgn-costdown-edits",
-    "db:migrate:local": "wrangler d1 execute malgn-costdown-edits --local --file=migrations/0001_init.sql",
-    "db:migrate:remote": "wrangler d1 execute malgn-costdown-edits --remote --file=migrations/0001_init.sql",
-    "db:export:remote": "wrangler d1 export malgn-costdown-edits --remote --output=db/d1-dump.sql"
+    "db:create": "wrangler d1 create m-costdown-edits",
+    "db:migrate:local": "wrangler d1 execute m-costdown-edits --local --file=migrations/0001_init.sql",
+    "db:migrate:remote": "wrangler d1 execute m-costdown-edits --remote --file=migrations/0001_init.sql",
+    "db:export:remote": "wrangler d1 export m-costdown-edits --remote --output=db/d1-dump.sql"
   },
   "dependencies": {
     "express": "^4.21.1"

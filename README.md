@@ -35,7 +35,7 @@ npm run db:create
 ```
 [[d1_databases]]
 binding = "DB"
-database_name = "malgn-costdown-edits"
+database_name = "m-costdown-edits"
 database_id = "abc12345-def6-7890-..."
 ```
 
@@ -69,7 +69,7 @@ git push
 
 배포 후 Pages 프로젝트 → **Settings** → **Functions** → **D1 database bindings** → **Add binding**
 - Variable name: `DB`
-- D1 database: `malgn-costdown-edits` 선택
+- D1 database: `m-costdown-edits` 선택
 
 저장 후 다음 배포부터 적용됩니다. 한 번 더 **Deployments** → **Retry deployment** 로 재배포해 바인딩을 활성화하세요.
 
