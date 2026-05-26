@@ -245,13 +245,13 @@ body {
 .table-expense th.col-detail, .table-expense td.col-detail { min-width: 220px; }
 .table-expense th.col-memo, .table-expense td.col-memo { min-width: 400px; }
 
-/* 절감가능여부 강조 (O = 연한 노란색, 세모 = 연한 빨간색, X = 연한 회색) */
+/* 절감가능여부 강조 (O = 연한 노란색, 세모 = 연한 빨간색, X = 하얀색) */
 .table-expense tbody tr.row-reduce-o > td { background-color: #fef9c3; }
 .table-expense tbody tr.row-reduce-o:hover > td { background-color: #fdf2a8; }
 .table-expense tbody tr.row-reduce-sam > td { background-color: #fde4e4; }
 .table-expense tbody tr.row-reduce-sam:hover > td { background-color: #fbd0d0; }
-.table-expense tbody tr.row-reduce-x > td { background-color: #f1f3f5; }
-.table-expense tbody tr.row-reduce-x:hover > td { background-color: #e9ecef; }
+.table-expense tbody tr.row-reduce-x > td { background-color: #ffffff; }
+.table-expense tbody tr.row-reduce-x:hover > td { background-color: #f8f9fa; }
 
 /* 컬럼 헤더 고정 + 세로 스크롤 영역 */
 .page-content:has(.expenses-page) { padding-top: .85rem; }
