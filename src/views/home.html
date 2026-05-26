@@ -58,10 +58,24 @@
             </div>
         </div>
 
-        <!-- 거래처별 비용 (전체) -->
+        <!-- 분류별 비용 (1~4월 월평균) — 비용 상세 편집값 반영 -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="card-title-sm">분류별 비용 — 1~4월 월평균 (비용 상세 편집 반영, 전체 {{ byCategory.length }}개)</div>
+                <div class="bar-row" v-for="r in byCategory" :key="r.key">
+                    <div class="bar-label" :title="r.key">{{ r.key }}</div>
+                    <div class="bar-track">
+                        <div class="bar-fill green" :style="{ width: width(r.total, byCategory) }"></div>
+                    </div>
+                    <div class="bar-value">{{ short(r.total) }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 거래처별 비용 (1~4월 월평균) -->
         <div class="card">
             <div class="card-body">
-                <div class="card-title-sm">거래처별 비용 (전체 {{ byVendor.length }}곳)</div>
+                <div class="card-title-sm">거래처별 비용 — 1~4월 월평균 (전체 {{ byVendor.length }}곳)</div>
                 <div class="bar-row" v-for="r in byVendor" :key="r.key">
                     <div class="bar-label" :title="r.key">{{ r.key }}</div>
                     <div class="bar-track">

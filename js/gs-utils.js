@@ -50,6 +50,49 @@
                 .map(([key, total]) => ({ key, total }))
                 .sort((a, b) => b.total - a.total);
         },
+
+        /** 비용 상세 페이지에서 인라인 편집되는 localStorage 키 목록 */
+        EXPENSE_KEYS: {
+            category: 'gs-expense-cats',
+            lever: 'gs-expense-lever',
+            dept: 'gs-expense-depts',
+            reducible: 'gs-expense-reducible',
+            memo: 'gs-expense-memos',
+            saving: 'gs-expense-saving',
+        },
+
+        /** localStorage 에서 비용 상세 편집값을 모두 로드 -> { category, lever, dept, ... } */
+        loadExpenseEdits() {
+            const out = {};
+            for (const k in GS.EXPENSE_KEYS) {
+                try {
+                    out[k] = JSON.parse(localStorage.getItem(GS.EXPENSE_KEYS[k]) || '{}');
+                } catch (e) {
+                    out[k] = {};
+                }
+            }
+            return out;
+        },
+
+        /** 비용 상세 편집값을 items 배열에 병합 (다른 페이지에서 편집 결과를 반영할 때 사용) */
+        applyExpenseEdits(items) {
+            const e = GS.loadExpenseEdits();
+            (items || []).forEach((it, idx) => {
+                if (it._id == null) it._id = idx;
+                const id = it._id;
+                const cat = (e.category[id] || '').toString().trim();
+                if (cat) it.category = cat;
+                const dept = e.dept[id];
+                it.deptList = Array.isArray(dept) ? dept.slice() : [];
+                it.lever = (e.lever[id] || '').toString();
+                const r = (e.reducible[id] || '').toString();
+                if (r) it.reducible = r;
+                it.memo = (e.memo[id] || '').toString();
+                const savRaw = (e.saving[id] || '').toString();
+                it.saving = Number(savRaw.replace(/[^\d.-]/g, '')) || 0;
+            });
+            return items;
+        },
     };
 
     window.GS = GS;

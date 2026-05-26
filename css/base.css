@@ -129,6 +129,67 @@ body {
     .bar-value { font-size: .78rem; }
 }
 
+/* 비용항목 필터 셀렉트 */
+.item-filter { width: auto; min-width: 132px; font-size: .82rem; }
+
+/* 비용항목 멀티 필터 드롭다운 */
+.filter-btn-multi { font-size: .82rem; min-width: 132px; text-align: left; }
+.filter-dd-menu {
+    min-width: 200px;
+    max-height: 280px;
+    overflow-y: auto;
+    font-size: .85rem;
+}
+.filter-dd-menu .dropdown-item { border-radius: 6px; cursor: pointer; }
+.filter-dd-menu .dropdown-item:active { color: inherit; background: #e0e7ff; }
+
+/* ---------- 비용항목 순위 (좌측 항목+분류 / 우측 세부+막대) ---------- */
+.item-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 110px;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--gs-line);
+}
+.item-row:last-child { border-bottom: 0; }
+.item-meta { display: flex; gap: 6px; min-width: 0; }
+.item-rank {
+    flex: none;
+    font-size: .82rem;
+    color: var(--gs-muted);
+    font-variant-numeric: tabular-nums;
+    width: 28px;
+}
+.item-meta-text { min-width: 0; }
+.item-name {
+    font-size: .85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.item-cat {
+    font-size: .74rem;
+    color: var(--gs-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.item-bar { min-width: 0; }
+.item-detail {
+    font-size: .78rem;
+    color: var(--gs-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+@media (max-width: 575px) {
+    .item-row { grid-template-columns: 132px 1fr 84px; gap: 8px; }
+    .item-rank { width: 22px; }
+}
+
 /* ---------- 월별 세로 막대 차트 ---------- */
 .vchart { display: flex; gap: 8px; align-items: flex-end; height: 218px; padding-top: 8px; }
 .vchart-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
@@ -268,6 +329,26 @@ body {
     max-width: 560px;
     padding: 1.25rem 1.35rem;
     box-shadow: 0 20px 50px rgba(15, 23, 42, .4);
+}
+
+/* ---------- 업데이트 완료 토스트 ---------- */
+.update-toast {
+    position: fixed;
+    top: 76px;
+    right: 24px;
+    z-index: 1080;
+    background: #16a34a;
+    color: #fff;
+    padding: .55rem .85rem;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, .15);
+    font-size: .85rem;
+    font-weight: 500;
+    animation: gs-toast-in .25s ease-out;
+}
+@keyframes gs-toast-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ---------- 로그인 (비밀번호 게이트) ---------- */

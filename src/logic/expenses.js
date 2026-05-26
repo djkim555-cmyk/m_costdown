@@ -72,6 +72,7 @@ export default {
             valSearch: '',
             dropStyle: {},
             memoModal: { open: false, rowId: null, text: '' },
+            updateMsg: '',
             deptOptions: DEPT_OPTIONS,
             deptDD: { open: false, rowId: null, style: {} },
             reducibleOpts: REDUCIBLE_OPTS,
@@ -445,6 +446,26 @@ export default {
             } catch (e) {
                 console.error('저장 실패:', col, e);
             }
+        },
+
+        // 업데이트: 현재 편집 내용을 확정 저장하고 다른 페이지(월비용 순위·대시보드)에 반영
+        applyUpdate() {
+            for (const col in STORES) {
+                try {
+                    localStorage.setItem(STORES[col].key, JSON.stringify(this.edits[col]));
+                } catch (e) {
+                    console.error('업데이트 저장 실패:', col, e);
+                }
+            }
+            try {
+                localStorage.setItem('gs-expense-applied-at', String(Date.now()));
+            } catch (e) { /* ignore */ }
+
+            window.dispatchEvent(new CustomEvent('gs-expense-edits-applied'));
+
+            this.updateMsg = '업데이트 완료 — 월비용 순위·대시보드에 반영됩니다';
+            clearTimeout(this._toastTimer);
+            this._toastTimer = setTimeout(() => { this.updateMsg = ''; }, 2400);
         },
     },
 };

@@ -21,6 +21,10 @@
                         <strong class="text-dark">{{ filtered.length }}</strong>건
                     </div>
                     <div class="col-6 col-lg-3 text-end">
+                        <button class="btn btn-primary btn-sm me-1" @click="applyUpdate"
+                                title="현재 편집 내용을 월비용 순위·대시보드에 반영">
+                            <i class="bi bi-arrow-up-circle me-1"></i>업데이트
+                        </button>
                         <button class="btn btn-outline-secondary btn-sm" @click="resetAll">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>필터 초기화
                         </button>
@@ -188,6 +192,11 @@
             <i :class="['bi', opt.icon, opt.cls]"></i>
             <span>{{ opt.label }}</span>
         </button>
+    </div>
+
+    <!-- 업데이트 완료 토스트 -->
+    <div v-if="updateMsg" class="update-toast">
+        <i class="bi bi-check-circle-fill me-1"></i>{{ updateMsg }}
     </div>
 
     <!-- 절감 방안 상세 팝업 -->

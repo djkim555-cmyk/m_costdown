@@ -17,7 +17,7 @@ export default {
                 fetch('/data/cost-items.json').then((r) => r.json()),
                 fetch('/data/forecast.json').then((r) => r.json()),
             ]);
-            this.items = items;
+            this.items = window.GS.applyExpenseEdits(items);
             this.tables = forecast.tables || [];
         } catch (e) {
             console.error('대시보드 데이터 로딩 실패:', e);
@@ -26,15 +26,35 @@ export default {
     },
 
     computed: {
-        // 거래처별 비용 (전체, 금액 내림차순)
+        // 거래처별 비용 — 1~4월 월평균 (내림차순)
         byVendor() {
-            return window.GS.groupSum(this.items, (i) => i.vendor || '(미상)', (i) => i.total);
+            return window.GS.groupSum(
+                this.items,
+                (i) => i.vendor || '(미상)',
+                (i) => this.avgQ1(i.months),
+            );
+        },
+
+        // 분류별 비용 — 1~4월 월평균 (비용 상세에서 편집한 분류 반영)
+        byCategory() {
+            return window.GS.groupSum(
+                this.items,
+                (i) => (i.category || '').trim() || '(미분류)',
+                (i) => this.avgQ1(i.months),
+            );
         },
     },
 
     methods: {
         comma(n) { return window.GS.comma(n); },
         short(n) { return window.GS.short(n); },
+
+        // 1~4월(index 0~3) 월평균
+        avgQ1(months) {
+            const arr = (months || []).slice(0, 4);
+            const sum = arr.reduce((a, b) => a + (Number(b) || 0), 0);
+            return sum / 4;
+        },
 
         // 비중(%) 표기
         ratioText(r) {
