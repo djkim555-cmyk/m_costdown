@@ -94,7 +94,7 @@ export default {
                 { key: 'reducible', label: '절감가능여부', type: 'text', cls: 'col-sm' },
                 { key: 'memo', label: '절감 방안', type: 'text', cls: 'col-memo' },
                 { key: 'branch', label: '비용분기', type: 'text', filter: false, cls: 'col-branch' },
-                { key: 'saving', label: '절감금액(E)', type: 'text', filter: false, cls: 'col-saving' },
+                { key: 'saving', label: '절감금액(월평균)', type: 'text', filter: false, cls: 'col-saving' },
                 { key: 'saving_month', label: '절감시기~', type: 'text', filter: false, cls: 'col-saving-month' },
                 ...monthCols,
                 { key: 'total', label: '합계', type: 'num', filter: false },
