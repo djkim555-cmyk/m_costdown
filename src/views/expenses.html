@@ -52,7 +52,14 @@
                             <!-- 월별 합계 -->
                             <tr class="month-sum-row">
                                 <th colspan="9" class="text-end">합계 →</th>
-                                <th>{{ comma(savingTotal()) }}</th>
+                                <th>
+                                    {{ comma(savingTotal()) }}
+                                    <span class="saving-ratio-badge text-muted ms-1"
+                                          title="1~4월 비용 합계의 월평균(= Σ 1~4월 ÷ 4) 대비 절감금액(E) 합계의 비율">
+                                        ({{ (savingRatio * 100).toFixed(1) }}%
+                                        <i class="bi bi-info-circle"></i>)
+                                    </span>
+                                </th>
                                 <th></th>
                                 <th v-for="n in 12" :key="'ms' + n" class="num">{{ cell(monthTotal(n - 1)) }}</th>
                                 <th class="num">{{ comma(filteredTotal) }}</th>

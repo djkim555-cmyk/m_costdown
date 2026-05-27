@@ -182,6 +182,25 @@ export default {
             return n;
         },
 
+        // 1~4월 비용 합계 (필터된 행)
+        q1Sum() {
+            return window.GS.sum(this.filtered.map((r) =>
+                (r.months[0] || 0) + (r.months[1] || 0) + (r.months[2] || 0) + (r.months[3] || 0)
+            ));
+        },
+
+        // 1~4월 월평균 = q1Sum / 4
+        q1MonthlyAvg() {
+            return this.q1Sum / 4;
+        },
+
+        // 절감비율 = 절감금액(E) 합계 / 1~4월 월평균
+        savingRatio() {
+            const avg = this.q1MonthlyAvg;
+            if (!avg) return 0;
+            return window.GS.sum(this.filtered.map((r) => this.savingNum(r._id))) / avg;
+        },
+
         // 현재 열린 컬럼의 고유값 목록 (엑셀식 연동 + 드롭다운 검색어 반영)
         visibleValues() {
             if (!this.openCol) return [];
@@ -630,7 +649,7 @@ export default {
             return Math.max(0, 100 - this.splitPercentSum(id));
         },
 
-        // 새 분기 행 추가 — 부모 행의 값을 복사하여 채움, 남은 % 한도까지 자동 할당
+        // 새 분기 행 추가 — 부모 행의 값을 복사하여 채움, 기본 10% 로 추가 후 사용자가 조정
         addSplit(id) {
             const arr = (this.edits.splits[id] || []).slice();
             const used = arr.reduce((s, x) => s + (Number(x.percent) || 0), 0);
@@ -641,11 +660,12 @@ export default {
                 this._toastTimer = setTimeout(() => { this.updateMsg = ''; }, 1800);
                 return;
             }
-            // 부모 행의 값을 복사 (절감금액은 비율만큼 안분)
+            // 기본 10% 로 추가 (잔여가 적으면 잔여만큼) — 여러 번 클릭해 여러 분기 행 생성 가능
+            const newPct = Math.min(remain, 10);
             const parentSavingN = Number(String(this.edits.saving[id] || '').replace(/[^\d.-]/g, '')) || 0;
-            const splitSavingN = Math.round(parentSavingN * remain / 100);
+            const splitSavingN = Math.round(parentSavingN * newPct / 100);
             arr.push(this.normSplit({
-                percent: remain,
+                percent: newPct,
                 dept: (this.edits.dept[id] || []).slice(),
                 lever: this.edits.lever[id] || '',
                 reducible: this.edits.reducible[id] || '',
