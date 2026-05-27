@@ -14,7 +14,7 @@
     const API_BASE = STATIC_ONLY_PORTS.has(location.port) ? 'http://localhost:3001' : '';
 
     // 비용 편집값 필드 목록 (서버 스키마와 1:1)
-    const EDIT_FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'splits'];
+    const EDIT_FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits'];
 
     // 구버전 localStorage 키 (마이그레이션 + 오프라인 폴백용)
     const LEGACY_KEYS = {
@@ -24,6 +24,7 @@
         reducible: 'gs-expense-reducible',
         memo: 'gs-expense-memos',
         saving: 'gs-expense-saving',
+        saving_month: 'gs-expense-saving-month',
         splits: 'gs-expense-splits',
     };
 
@@ -204,6 +205,7 @@
                 it.memo = (e.memo[id] || '').toString();
                 const savRaw = (e.saving[id] || '').toString();
                 it.saving = Number(savRaw.replace(/[^\d.-]/g, '')) || 0;
+                it.savingMonth = (e.saving_month && e.saving_month[id] || '').toString();
                 it.splits = Array.isArray(e.splits[id]) ? e.splits[id] : [];
             });
             return items;

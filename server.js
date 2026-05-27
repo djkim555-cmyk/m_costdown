@@ -23,19 +23,28 @@ const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');
 db.exec(`
     CREATE TABLE IF NOT EXISTS expense_edits (
-        row_id     INTEGER PRIMARY KEY,
-        category   TEXT,
-        lever      TEXT,
-        dept       TEXT,
-        reducible  TEXT,
-        memo       TEXT,
-        saving     TEXT,
-        splits     TEXT,
-        updated_at INTEGER
+        row_id       INTEGER PRIMARY KEY,
+        category     TEXT,
+        lever        TEXT,
+        dept         TEXT,
+        reducible    TEXT,
+        memo         TEXT,
+        saving       TEXT,
+        saving_month TEXT,
+        splits       TEXT,
+        updated_at   INTEGER
     );
 `);
 
-const FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'splits'];
+// 구버전 스키마(0001) 호환: 컬럼 누락 시에만 ALTER (기존 데이터 보존)
+const existingCols = new Set(
+    db.prepare("PRAGMA table_info(expense_edits)").all().map((c) => c.name),
+);
+if (!existingCols.has('saving_month')) {
+    db.exec('ALTER TABLE expense_edits ADD COLUMN saving_month TEXT');
+}
+
+const FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits'];
 const JSON_FIELDS = new Set(['dept', 'splits']);
 
 function parseField(field, raw) {
@@ -56,17 +65,18 @@ function serializeField(field, val) {
 
 const selectAllStmt = db.prepare('SELECT * FROM expense_edits');
 const upsertStmt = db.prepare(`
-    INSERT INTO expense_edits (row_id, category, lever, dept, reducible, memo, saving, splits, updated_at)
-    VALUES (:row_id, :category, :lever, :dept, :reducible, :memo, :saving, :splits, :updated_at)
+    INSERT INTO expense_edits (row_id, category, lever, dept, reducible, memo, saving, saving_month, splits, updated_at)
+    VALUES (:row_id, :category, :lever, :dept, :reducible, :memo, :saving, :saving_month, :splits, :updated_at)
     ON CONFLICT(row_id) DO UPDATE SET
-        category   = excluded.category,
-        lever      = excluded.lever,
-        dept       = excluded.dept,
-        reducible  = excluded.reducible,
-        memo       = excluded.memo,
-        saving     = excluded.saving,
-        splits     = excluded.splits,
-        updated_at = excluded.updated_at
+        category     = excluded.category,
+        lever        = excluded.lever,
+        dept         = excluded.dept,
+        reducible    = excluded.reducible,
+        memo         = excluded.memo,
+        saving       = excluded.saving,
+        saving_month = excluded.saving_month,
+        splits       = excluded.splits,
+        updated_at   = excluded.updated_at
 `);
 const beginStmt = db.prepare('BEGIN');
 const commitStmt = db.prepare('COMMIT');
@@ -103,6 +113,7 @@ function saveAllEdits(payload) {
                 reducible: serializeField('reducible', payload.reducible && payload.reducible[id]),
                 memo: serializeField('memo', payload.memo && payload.memo[id]),
                 saving: serializeField('saving', payload.saving && payload.saving[id]),
+                saving_month: serializeField('saving_month', payload.saving_month && payload.saving_month[id]),
                 splits: serializeField('splits', payload.splits && payload.splits[id]),
                 updated_at: now,
             });

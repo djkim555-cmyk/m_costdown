@@ -35,3 +35,6 @@ db/*.sql
 # Wrangler / Cloudflare local state
 .wrangler/
 .dev.vars
+
+# Claude Code local settings
+.claude/

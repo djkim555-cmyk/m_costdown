@@ -39,6 +39,8 @@ const STORES = {
     },
     // 절감금액(E): 추정 절감액 (원본 데이터 없음 → 빈값)
     saving: { init: () => '' },
+    // 절감시기: 절감 시작 년월 (YYYY-MM, 원본 데이터 없음 → 빈값)
+    saving_month: { init: () => '' },
     // 비용분기: 행을 팀별로 % 분기한 하위 행 목록 [{ dept, percent }]
     splits: { init: () => [] },
 };
@@ -64,7 +66,7 @@ export default {
         return {
             loaded: false,
             items: [],
-            edits: { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, splits: {} },
+            edits: { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {} },
             search: '',
             // 페이지 진입 시 기본 정렬: 항목 컬럼 오름차순
             sortKey: 'item',
@@ -93,6 +95,7 @@ export default {
                 { key: 'memo', label: '절감 방안', type: 'text', cls: 'col-memo' },
                 { key: 'branch', label: '비용분기', type: 'text', filter: false, cls: 'col-branch' },
                 { key: 'saving', label: '절감금액(E)', type: 'text', filter: false, cls: 'col-saving' },
+                { key: 'saving_month', label: '절감시기~', type: 'text', filter: false, cls: 'col-saving-month' },
                 ...monthCols,
                 { key: 'total', label: '합계', type: 'num', filter: false },
             ],
@@ -609,6 +612,7 @@ export default {
                 memo: typeof obj.memo === 'string' ? obj.memo : '',
                 saving: typeof obj.saving === 'string' ? obj.saving
                     : (typeof obj.saving === 'number' && obj.saving ? window.GS.comma(obj.saving) : ''),
+                saving_month: typeof obj.saving_month === 'string' ? obj.saving_month : '',
             };
         },
 
@@ -647,6 +651,7 @@ export default {
                 reducible: this.edits.reducible[id] || '',
                 memo: this.edits.memo[id] || '',
                 saving: splitSavingN ? window.GS.comma(splitSavingN) : '',
+                saving_month: this.edits.saving_month[id] || '',
             }));
             this.edits.splits[id] = arr;
             this.saveEdit('splits');

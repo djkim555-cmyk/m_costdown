@@ -242,6 +242,7 @@ body {
 .table-expense th.col-cat, .table-expense td.col-cat { min-width: 165px; }
 .table-expense th.col-dept, .table-expense td.col-dept { min-width: 86px; }
 .table-expense th.col-saving, .table-expense td.col-saving { min-width: 118px; }
+.table-expense th.col-saving-month, .table-expense td.col-saving-month { min-width: 138px; }
 .table-expense th.col-detail, .table-expense td.col-detail { min-width: 220px; }
 .table-expense th.col-memo, .table-expense td.col-memo { min-width: 400px; }
 .table-expense th.col-branch, .table-expense td.col-branch { min-width: 92px; width: 1%; white-space: nowrap; }

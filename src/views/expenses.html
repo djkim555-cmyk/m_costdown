@@ -53,6 +53,7 @@
                             <tr class="month-sum-row">
                                 <th colspan="9" class="text-end">합계 →</th>
                                 <th>{{ comma(savingTotal()) }}</th>
+                                <th></th>
                                 <th v-for="n in 12" :key="'ms' + n" class="num">{{ cell(monthTotal(n - 1)) }}</th>
                                 <th class="num">{{ comma(filteredTotal) }}</th>
                             </tr>
@@ -140,6 +141,10 @@
                                                v-model="edits.saving[row._id]" @change="formatSaving(row._id)"
                                                placeholder=" ">
                                     </td>
+                                    <td class="col-saving-month">
+                                        <input type="month" class="form-control form-control-sm cell-input"
+                                               v-model="edits.saving_month[row._id]" @change="saveEdit('saving_month')">
+                                    </td>
                                     <td v-for="n in 12" :key="n" class="num">{{ cell(row.months[n - 1]) }}</td>
                                     <td class="num fw-semibold">{{ comma(row.total) }}</td>
                                 </tr>
@@ -209,19 +214,23 @@
                                                v-model="split.saving" @change="formatSplitSaving(row._id, si)"
                                                placeholder=" ">
                                     </td>
+                                    <td class="col-saving-month">
+                                        <input type="month" class="form-control form-control-sm cell-input"
+                                               v-model="split.saving_month" @change="saveSplits">
+                                    </td>
                                     <td v-for="n in 12" :key="'sm' + n" class="num">{{ cell(splitMonth(row, split.percent, n - 1)) }}</td>
                                     <td class="num">{{ comma(splitTotal(row, split.percent)) }}</td>
                                 </tr>
                             </template>
                             <tr v-if="!filtered.length">
-                                <td colspan="23" class="text-center text-muted py-4">
+                                <td colspan="24" class="text-center text-muted py-4">
                                     조건에 해당하는 비용 항목이 없습니다.
                                 </td>
                             </tr>
                         </tbody>
                         <tfoot v-if="filtered.length">
                             <tr class="fw-semibold">
-                                <td colspan="22" class="text-end">합계</td>
+                                <td colspan="23" class="text-end">합계</td>
                                 <td class="num">{{ comma(filteredTotal) }}</td>
                             </tr>
                         </tfoot>

@@ -7,7 +7,7 @@
  *   D1 binding 이름: DB  (wrangler.toml 의 [[d1_databases]] binding)
  * ============================================================ */
 
-const FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'splits'];
+const FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits'];
 const JSON_FIELDS = new Set(['dept', 'splits']);
 
 function parseField(field, raw) {
@@ -67,17 +67,18 @@ export async function onRequestPost({ request, env }) {
     const now = Date.now();
 
     const insertSql = `
-        INSERT INTO expense_edits (row_id, category, lever, dept, reducible, memo, saving, splits, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO expense_edits (row_id, category, lever, dept, reducible, memo, saving, saving_month, splits, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(row_id) DO UPDATE SET
-            category   = excluded.category,
-            lever      = excluded.lever,
-            dept       = excluded.dept,
-            reducible  = excluded.reducible,
-            memo       = excluded.memo,
-            saving     = excluded.saving,
-            splits     = excluded.splits,
-            updated_at = excluded.updated_at
+            category     = excluded.category,
+            lever        = excluded.lever,
+            dept         = excluded.dept,
+            reducible    = excluded.reducible,
+            memo         = excluded.memo,
+            saving       = excluded.saving,
+            saving_month = excluded.saving_month,
+            splits       = excluded.splits,
+            updated_at   = excluded.updated_at
     `;
 
     try {
@@ -91,6 +92,7 @@ export async function onRequestPost({ request, env }) {
                 serializeField('reducible', payload.reducible && payload.reducible[id]),
                 serializeField('memo', payload.memo && payload.memo[id]),
                 serializeField('saving', payload.saving && payload.saving[id]),
+                serializeField('saving_month', payload.saving_month && payload.saving_month[id]),
                 serializeField('splits', payload.splits && payload.splits[id]),
                 now,
             ));
