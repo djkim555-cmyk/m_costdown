@@ -182,25 +182,6 @@ export default {
             return n;
         },
 
-        // 1~4월 비용 합계 (필터된 행)
-        q1Sum() {
-            return window.GS.sum(this.filtered.map((r) =>
-                (r.months[0] || 0) + (r.months[1] || 0) + (r.months[2] || 0) + (r.months[3] || 0)
-            ));
-        },
-
-        // 1~4월 월평균 = q1Sum / 4
-        q1MonthlyAvg() {
-            return this.q1Sum / 4;
-        },
-
-        // 절감비율 = 절감금액(E) 합계 / 1~4월 월평균
-        savingRatio() {
-            const avg = this.q1MonthlyAvg;
-            if (!avg) return 0;
-            return window.GS.sum(this.filtered.map((r) => this.savingNum(r._id))) / avg;
-        },
-
         // 현재 열린 컬럼의 고유값 목록 (엑셀식 연동 + 드롭다운 검색어 반영)
         visibleValues() {
             if (!this.openCol) return [];

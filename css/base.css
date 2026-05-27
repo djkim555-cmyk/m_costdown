@@ -537,14 +537,6 @@ body {
     white-space: nowrap;
 }
 
-/* 절감금액 합계 옆 절감비율 배지 */
-.saving-ratio-badge {
-    font-size: .72rem;
-    font-weight: 500;
-    cursor: help;
-}
-.saving-ratio-badge .bi-info-circle { font-size: .72rem; opacity: .7; }
-
 /* ============================================================
  * 절감 전략 페이지 (strategy)
  * ============================================================ */
