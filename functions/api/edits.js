@@ -36,7 +36,7 @@ function jsonResponse(data, status) {
 export async function onRequestGet({ env }) {
     try {
         const { results } = await env.DB.prepare('SELECT * FROM expense_edits').all();
-        const out = { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, splits: {} };
+        const out = { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {} };
         for (const r of (results || [])) {
             for (const f of FIELDS) {
                 out[f][r.row_id] = parseField(f, r[f]);

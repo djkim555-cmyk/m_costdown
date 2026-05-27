@@ -84,7 +84,7 @@ const rollbackStmt = db.prepare('ROLLBACK');
 
 function loadAllEdits() {
     const rows = selectAllStmt.all();
-    const out = { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, splits: {} };
+    const out = { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {} };
     for (const r of rows) {
         for (const f of FIELDS) {
             out[f][r.row_id] = parseField(f, r[f]);
