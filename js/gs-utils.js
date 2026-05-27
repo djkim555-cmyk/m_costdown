@@ -204,6 +204,7 @@
                 it.memo = (e.memo[id] || '').toString();
                 const savRaw = (e.saving[id] || '').toString();
                 it.saving = Number(savRaw.replace(/[^\d.-]/g, '')) || 0;
+                it.splits = Array.isArray(e.splits[id]) ? e.splits[id] : [];
             });
             return items;
         },

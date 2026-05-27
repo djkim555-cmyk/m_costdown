@@ -1,5 +1,5 @@
 // 담당부서 선택 옵션 (복수 선택)
-const DEPT_OPTIONS = ['컨설팅', '마케팅', '경영지원', '범용', '환급', '공공', '위캔디오', 'UI/UX'];
+const DEPT_OPTIONS = ['컨설팅', '마케팅', '경영지원', '범용', '환급', '공공', '위캔디오', 'UI/UX', '기타'];
 
 // 절감가능여부 옵션 (아이콘 드롭다운)
 const REDUCIBLE_OPTS = [
@@ -169,6 +169,16 @@ export default {
             return window.GS.sum(this.filtered.map((i) => i.total));
         },
 
+        // 전체 분기 행 건수 (모든 행의 splits 배열 길이 합)
+        totalSplitCount() {
+            let n = 0;
+            for (const id in this.edits.splits) {
+                const arr = this.edits.splits[id];
+                if (Array.isArray(arr)) n += arr.length;
+            }
+            return n;
+        },
+
         // 현재 열린 컬럼의 고유값 목록 (엑셀식 연동 + 드롭다운 검색어 반영)
         visibleValues() {
             if (!this.openCol) return [];
@@ -251,7 +261,18 @@ export default {
         matchRow(row, excludeKey) {
             for (const key in this.colFilters) {
                 if (key === excludeKey) continue;
-                if (!this.colFilters[key].includes(String(this.raw(row, key)))) return false;
+                const f = this.colFilters[key];
+                // 담당부서: 개별 부서 단위 매칭 (배열에 하나라도 포함되면 통과)
+                if (key === 'dept') {
+                    const arr = this.edits.dept[row._id] || [];
+                    if (!arr.length) {
+                        if (!f.includes('')) return false;
+                    } else if (!arr.some((d) => f.includes(d))) {
+                        return false;
+                    }
+                    continue;
+                }
+                if (!f.includes(String(this.raw(row, key)))) return false;
             }
             const q = this.search.trim().toLowerCase();
             if (q) {
@@ -273,6 +294,21 @@ export default {
 
         // 주어진 행 집합에서 컬럼 key 의 고유값 목록 → [{ raw, label }]
         distinctFrom(key, rows) {
+            // 담당부서: 개별 부서 단위 노출 + DEPT_OPTIONS 전체 항상 포함 (미사용 부서도 필터 가능)
+            if (key === 'dept') {
+                const set = new Set(DEPT_OPTIONS);
+                let hasEmpty = false;
+                for (const row of rows) {
+                    const arr = this.edits.dept[row._id] || [];
+                    if (!arr.length) hasEmpty = true;
+                    else for (const d of arr) set.add(d);
+                }
+                const list = [...set].sort((a, b) => String(a).localeCompare(String(b), 'ko'))
+                    .map((r) => ({ raw: r, label: r }));
+                if (hasEmpty) list.unshift({ raw: '', label: '(비어 있음)' });
+                return list;
+            }
+
             const col = this.columns.find((c) => c.key === key);
             const isNum = col && col.type === 'num';
             const seen = new Map();

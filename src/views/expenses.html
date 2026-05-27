@@ -18,7 +18,12 @@
                                placeholder="전체 검색 (내용 · 거래처 · 메모...)">
                     </div>
                     <div class="col-6 col-lg-3 small text-muted">
-                        <strong class="text-dark">{{ filtered.length }}</strong>건
+                        전체 <strong class="text-dark">{{ items.length }}</strong>건
+                        <span class="mx-1">·</span>
+                        분기 <strong class="text-dark">+{{ totalSplitCount }}</strong>건
+                        <span v-if="filtered.length !== items.length" class="ms-1">
+                            (필터 <strong class="text-dark">{{ filtered.length }}</strong>건)
+                        </span>
                         <span v-if="offline" class="badge text-bg-warning ms-2" title="서버 연결이 끊겨 브라우저에만 임시 저장됩니다">
                             <i class="bi bi-cloud-slash me-1"></i>오프라인
                         </span>

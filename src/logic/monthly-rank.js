@@ -25,21 +25,40 @@ export default {
 
     computed: {
         // 비용항목별 (개별 행) — 1~4월 월평균 내림차순 (전체 순위 부여)
+        // 비용 상세에서 분기된 행은 별도 리스트로 추가되어 순위에 포함된다.
         byItem() {
-            return [...this.items]
-                .map((i) => {
-                    const item = (i.item || '').trim() || '(미상)';
-                    const category = (i.category || '').trim();
-                    const detail = (i.detail || '').trim();
-                    const vendor = (i.vendor || '').trim();
-                    const detailFull = [detail, vendor].filter(Boolean).join(' · ') || '-';
-                    return {
-                        item,
-                        category,
-                        detailFull,
-                        total: this.avgQ1(i.months),
-                    };
-                })
+            const rows = [];
+            for (const i of this.items) {
+                const item = (i.item || '').trim() || '(미상)';
+                const category = (i.category || '').trim();
+                const detail = (i.detail || '').trim();
+                const vendor = (i.vendor || '').trim();
+                const baseDetail = [detail, vendor].filter(Boolean).join(' · ');
+                const baseAvg = this.avgQ1(i.months);
+                const splits = Array.isArray(i.splits) ? i.splits : [];
+                const splitSum = splits.reduce((s, x) => s + (Number(x.percent) || 0), 0);
+                const parentPct = Math.max(0, Math.min(100, 100 - splitSum));
+
+                if (!splits.length) {
+                    rows.push({ item, category, detailFull: baseDetail || '-', total: baseAvg });
+                } else {
+                    if (parentPct > 0) {
+                        const tag = parentPct < 100 ? `원행 ${parentPct}%` : '';
+                        const detailFull = [baseDetail, tag].filter(Boolean).join(' · ') || '-';
+                        rows.push({ item, category, detailFull, total: baseAvg * parentPct / 100 });
+                    }
+                    for (const s of splits) {
+                        const pct = Number(s.percent) || 0;
+                        if (pct <= 0) continue;
+                        const deptArr = Array.isArray(s.dept) ? s.dept.filter(Boolean) : [];
+                        const deptLabel = deptArr.join(', ');
+                        const tag = `분기 ${pct}%` + (deptLabel ? ` · ${deptLabel}` : '');
+                        const detailFull = [baseDetail, tag].filter(Boolean).join(' · ');
+                        rows.push({ item, category, detailFull, total: baseAvg * pct / 100 });
+                    }
+                }
+            }
+            return rows
                 .sort((a, b) => b.total - a.total)
                 .map((r, idx) => ({ ...r, rank: idx + 1 }));
         },
