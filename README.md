@@ -73,12 +73,16 @@ git push
 
 저장 후 다음 배포부터 적용됩니다. 한 번 더 **Deployments** → **Retry deployment** 로 재배포해 바인딩을 활성화하세요.
 
-### 7. (선택) 비밀번호 보호
+### 7. (권장) 접근 비밀번호 보호 — 서버 측 인증
 
-같은 화면의 **Environment variables** → **Add variable**
-- `APP_PASSWORD = <원하는 비밀번호>`
+같은 화면의 **Environment variables** → **Add variable** (값은 **Encrypt** 권장)
+- `APP_PASSWORD_FULL = <전체 권한 비밀번호>` — 전체 메뉴 (대시보드 + 전략 A/B안)
+- `APP_PASSWORD_RESTRICTED = <제한 권한 비밀번호>` — 전략 메뉴 숨김 (선택)
+- `SESSION_SECRET = <임의의 긴 문자열>` — (선택) 세션 토큰 서명 키. 미설정 시 비밀번호에서 파생
 
-설정 시 `/api/*` 호출에 `X-App-Password` 헤더가 필요합니다. (미설정 시 인증 없이 작동)
+로그인 화면에서 비밀번호를 입력하면 서버(`POST /api/login`)가 검증 후 서명된 세션 토큰을
+발급하고, 이후 `/api/*` 호출은 `Authorization: Bearer <token>` 헤더로 인증됩니다.
+**비밀번호 값은 클라이언트 소스에 포함되지 않습니다.** (미설정 시 인증 없이 작동)
 
 ### 8. 기존 localStorage 데이터 이관
 
@@ -89,8 +93,10 @@ git push
 ```
 project/
 ├── functions/              # Cloudflare Pages Functions (배포 시 자동 라우팅)
-│   ├── _middleware.js     # /api/* 비밀번호 인증 (선택)
+│   ├── _middleware.js     # /api/* 세션 토큰 인증 (login·health 제외)
+│   ├── _session.js        # 세션 토큰 발급/검증 유틸 (HMAC-SHA256)
 │   └── api/
+│       ├── login.js       # POST /api/login (비밀번호 검증 → 토큰 발급)
 │       ├── edits.js       # GET/POST /api/edits
 │       └── health.js      # GET /api/health
 ├── migrations/
@@ -106,11 +112,13 @@ project/
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
+| `POST` | `/api/login`  | 비밀번호 검증 → 서명 세션 토큰 발급 `{ ok, role, token }` (공개) |
 | `GET`  | `/api/edits`  | 전체 비용 편집값 조회 `{category, lever, dept, reducible, memo, saving, splits}` |
 | `POST` | `/api/edits`  | 편집값 전체 저장 (UPSERT, D1 batch 트랜잭션) |
-| `GET`  | `/api/health` | 서버 + D1 연결 확인 |
+| `GET`  | `/api/health` | 서버 + D1 연결 확인 (공개) |
 
-`APP_PASSWORD` 환경변수가 설정된 경우 `X-App-Password` 헤더로 비밀번호 전달 필요.
+비밀번호 환경변수가 설정된 경우 `/api/edits` 호출에 `Authorization: Bearer <token>` 헤더가 필요합니다.
+토큰은 `POST /api/login` 으로 발급받습니다 (`/api/login`·`/api/health` 는 인증 없이 접근 가능).
 
 ## 로컬 개발 시나리오
 
@@ -134,4 +142,10 @@ npx wrangler d1 execute <db-name> --remote --file=db/d1-dump.sql
 
 ## 비밀번호 변경
 
-페이지 진입 비밀번호는 [index.html](index.html) 의 `window.APP_PASSWORD`. 자세한 내용은 [docs/pw.md](docs/pw.md).
+접근 비밀번호는 **서버 환경변수**로만 관리됩니다 (클라이언트 소스에 평문 노출 없음).
+
+- **운영(Cloudflare Pages)**: 대시보드 → 프로젝트 → **Settings** → **Environment variables** 에서
+  `APP_PASSWORD_FULL` / `APP_PASSWORD_RESTRICTED` 값을 수정 후 재배포.
+- **로컬 dev**: `.dev.vars`(wrangler) 또는 `npm start` 실행 시 환경변수로 지정.
+
+변경한 비밀번호 값은 저장소(Git)에 남기지 말고 1Password 등 외부 채널로 공유하세요.

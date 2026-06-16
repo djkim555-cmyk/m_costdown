@@ -54,8 +54,17 @@
         return false;
     }
 
+    // 세션 토큰(로그인 시 발급)을 Authorization 헤더로 부착 — 서버 측 인증
+    function authHeaders(extra) {
+        const h = Object.assign({}, extra || {});
+        let token = '';
+        try { token = sessionStorage.getItem('authToken') || ''; } catch (e) { /* ignore */ }
+        if (token) h['Authorization'] = 'Bearer ' + token;
+        return h;
+    }
+
     async function fetchEditsFromServer() {
-        const res = await fetch(API_BASE + '/api/edits');
+        const res = await fetch(API_BASE + '/api/edits', { headers: authHeaders() });
         if (!res.ok) throw new Error('GET /api/edits ' + res.status);
         return await res.json();
     }
@@ -63,7 +72,7 @@
     async function postEditsToServer(edits) {
         const res = await fetch(API_BASE + '/api/edits', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(edits),
         });
         if (!res.ok) throw new Error('POST /api/edits ' + res.status);

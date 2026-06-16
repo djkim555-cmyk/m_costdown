@@ -5,18 +5,59 @@
  *   POST /api/edits          편집값 전체 저장 (덮어쓰기)
  *
  *   ENV:
- *     PORT          서버 포트 (기본 3001)
- *     APP_PASSWORD  요청 인증 비밀번호 (미설정 시 인증 생략)
- *     DB_PATH       SQLite 파일 경로 (기본 ./db/expense-edits.db)
+ *     PORT                     서버 포트 (기본 3001)
+ *     APP_PASSWORD_FULL        전체 권한 비밀번호 (미설정 시 인증 생략)
+ *     APP_PASSWORD_RESTRICTED  제한 권한 비밀번호 (전략 메뉴 숨김)
+ *     SESSION_SECRET           (선택) 토큰 서명 키
+ *     DB_PATH                  SQLite 파일 경로 (기본 ./db/expense-edits.db)
  * ============================================================ */
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const express = require('express');
 const { DatabaseSync } = require('node:sqlite');
 
 const PORT = Number(process.env.PORT) || 3001;
-const APP_PASSWORD = process.env.APP_PASSWORD || '';
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'db', 'expense-edits.db');
+
+// ── 서버 측 인증 ──────────────────────────────────────────────
+//   비밀번호↔권한 맵 (환경변수에만 존재, 클라이언트로 노출 안 함)
+//   둘 다 미설정이면 인증 비활성화 (로컬 dev 호환)
+const PW_MAP = {};
+if (process.env.APP_PASSWORD_FULL) PW_MAP[process.env.APP_PASSWORD_FULL] = 'full';
+if (process.env.APP_PASSWORD_RESTRICTED) PW_MAP[process.env.APP_PASSWORD_RESTRICTED] = 'restricted';
+const AUTH_ENABLED = Object.keys(PW_MAP).length > 0;
+const SESSION_SECRET = process.env.SESSION_SECRET
+    || ((process.env.APP_PASSWORD_FULL || '') + '|' + (process.env.APP_PASSWORD_RESTRICTED || ''))
+    || 'm-costdown-dev';
+const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
+
+function b64url(buf) {
+    return Buffer.from(buf).toString('base64')
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function signToken(role) {
+    const payload = b64url(JSON.stringify({ role, exp: Date.now() + TOKEN_TTL_MS }));
+    const sig = b64url(crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest());
+    return payload + '.' + sig;
+}
+function verifyToken(token) {
+    if (!token || token.indexOf('.') < 0) return null;
+    const [payload, sig] = token.split('.');
+    const expected = b64url(crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest());
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    let data;
+    try { data = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()); }
+    catch (e) { return null; }
+    if (!data || typeof data.exp !== 'number' || data.exp < Date.now()) return null;
+    return { role: data.role };
+}
+function bearer(req) {
+    const m = (req.get('Authorization') || '').match(/^Bearer\s+(.+)$/i);
+    return m ? m[1].trim() : '';
+}
 
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new DatabaseSync(DB_PATH);
@@ -134,18 +175,27 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-App-Password');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     if (req.method === 'OPTIONS') return res.sendStatus(204);
     next();
 });
 
-// 비밀번호 게이트 — APP_PASSWORD 환경변수가 설정된 경우에만 적용
+// 세션 토큰 게이트 — 비밀번호 환경변수가 설정된 경우에만 적용
 function requireAuth(req, res, next) {
-    if (!APP_PASSWORD) return next();
-    if (req.get('X-App-Password') === APP_PASSWORD) return next();
-    res.status(401).json({ error: '인증 실패' });
+    if (!AUTH_ENABLED) return next();
+    if (verifyToken(bearer(req))) return next();
+    res.status(401).json({ error: '인증이 필요합니다.' });
 }
+
+// 비밀번호 검증 후 서명 세션 토큰 발급 (서버 측 인증)
+app.post('/api/login', (req, res) => {
+    const password = req.body && typeof req.body.password === 'string' ? req.body.password : '';
+    if (!AUTH_ENABLED) return res.json({ ok: true, role: 'full', token: signToken('full') });
+    const role = PW_MAP[password];
+    if (!role) return res.status(401).json({ error: '비밀번호가 올바르지 않습니다.' });
+    res.json({ ok: true, role, token: signToken(role) });
+});
 
 app.get('/api/edits', requireAuth, (req, res) => {
     try {
@@ -175,5 +225,5 @@ app.use(express.static(__dirname, { extensions: ['html'] }));
 
 app.listen(PORT, () => {
     console.log(`[server] http://localhost:${PORT}  (DB: ${DB_PATH})`);
-    if (!APP_PASSWORD) console.log('[server] APP_PASSWORD 미설정 — 인증 없이 운영됩니다');
+    if (!AUTH_ENABLED) console.log('[server] APP_PASSWORD_* 미설정 — 인증 없이 운영됩니다');
 });
