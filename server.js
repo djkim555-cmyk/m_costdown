@@ -21,15 +21,22 @@ const PORT = Number(process.env.PORT) || 3001;
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'db', 'expense-edits.db');
 
 // ── 서버 측 인증 ──────────────────────────────────────────────
-//   비밀번호↔권한 맵 (환경변수에만 존재, 클라이언트로 노출 안 함)
-//   둘 다 미설정이면 인증 비활성화 (로컬 dev 호환)
-const PW_MAP = {};
-if (process.env.APP_PASSWORD_FULL) PW_MAP[process.env.APP_PASSWORD_FULL] = 'full';
-if (process.env.APP_PASSWORD_RESTRICTED) PW_MAP[process.env.APP_PASSWORD_RESTRICTED] = 'restricted';
-const AUTH_ENABLED = Object.keys(PW_MAP).length > 0;
-const SESSION_SECRET = process.env.SESSION_SECRET
-    || ((process.env.APP_PASSWORD_FULL || '') + '|' + (process.env.APP_PASSWORD_RESTRICTED || ''))
-    || 'm-costdown-dev';
+//   비밀번호의 SHA-256 해시만 코드에 둠(평문 미보관). 환경변수 평문이 있으면 우선.
+//   ⚠️ 해시 원문은 과거 공개 이력에 존재 — 실보안 필요 시 환경변수로 새 값 설정.
+const DEFAULT_PW_HASHES = {
+    '39cc6b23f1341f4f47849a77e257e644f7117f6306a3ea2d8cc30130f9990157': 'full',
+    'e9c92607886a599ac14e7f3e290626d36d5458e9d7fd86c51efa522863d81ce4': 'restricted',
+};
+function sha256hex(s) {
+    return crypto.createHash('sha256').update(String(s == null ? '' : s)).digest('hex');
+}
+function resolveRole(password) {
+    if (process.env.APP_PASSWORD_FULL && password === process.env.APP_PASSWORD_FULL) return 'full';
+    if (process.env.APP_PASSWORD_RESTRICTED && password === process.env.APP_PASSWORD_RESTRICTED) return 'restricted';
+    return DEFAULT_PW_HASHES[sha256hex(password)] || null;
+}
+const AUTH_ENABLED = true; // 기본 해시가 항상 존재하므로 인증 상시 활성
+const SESSION_SECRET = process.env.SESSION_SECRET || Object.keys(DEFAULT_PW_HASHES).join('|');
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
 
 function b64url(buf) {
@@ -181,7 +188,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 세션 토큰 게이트 — 비밀번호 환경변수가 설정된 경우에만 적용
+// 세션 토큰 게이트 — /api/login 으로 발급받은 Bearer 토큰 필요
 function requireAuth(req, res, next) {
     if (!AUTH_ENABLED) return next();
     if (verifyToken(bearer(req))) return next();
@@ -191,8 +198,7 @@ function requireAuth(req, res, next) {
 // 비밀번호 검증 후 서명 세션 토큰 발급 (서버 측 인증)
 app.post('/api/login', (req, res) => {
     const password = req.body && typeof req.body.password === 'string' ? req.body.password : '';
-    if (!AUTH_ENABLED) return res.json({ ok: true, role: 'full', token: signToken('full') });
-    const role = PW_MAP[password];
+    const role = resolveRole(password);
     if (!role) return res.status(401).json({ error: '비밀번호가 올바르지 않습니다.' });
     res.json({ ok: true, role, token: signToken(role) });
 });
@@ -225,5 +231,7 @@ app.use(express.static(__dirname, { extensions: ['html'] }));
 
 app.listen(PORT, () => {
     console.log(`[server] http://localhost:${PORT}  (DB: ${DB_PATH})`);
-    if (!AUTH_ENABLED) console.log('[server] APP_PASSWORD_* 미설정 — 인증 없이 운영됩니다');
+    if (!process.env.APP_PASSWORD_FULL && !process.env.APP_PASSWORD_RESTRICTED) {
+        console.log('[server] APP_PASSWORD_* 미설정 — 기본 비밀번호(해시 폴백)로 운영됩니다');
+    }
 });

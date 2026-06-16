@@ -6,7 +6,7 @@
  *   요청  : { "password": "..." }
  *   응답  : 200 { ok, role, token }  |  401 { error }
  * ============================================================ */
-import { authConfig, issueToken } from '../_session.js';
+import { authConfig, resolveRole, issueToken } from '../_session.js';
 
 function json(data, status) {
     return new Response(JSON.stringify(data), {
@@ -21,15 +21,10 @@ export async function onRequestPost({ request, env }) {
     catch (e) { return json({ error: '잘못된 요청 본문' }, 400); }
 
     const password = body && typeof body.password === 'string' ? body.password : '';
-    const { map, enabled, secret } = authConfig(env);
 
-    // 비밀번호 미설정(로컬 dev) → 인증 비활성화, 전체 권한 부여
-    if (!enabled) {
-        return json({ ok: true, role: 'full', token: await issueToken(secret, 'full', Date.now()) });
-    }
-
-    const role = map[password];
+    const role = await resolveRole(env, password);
     if (!role) return json({ error: '비밀번호가 올바르지 않습니다.' }, 401);
 
+    const { secret } = authConfig(env);
     return json({ ok: true, role, token: await issueToken(secret, role, Date.now()) });
 }

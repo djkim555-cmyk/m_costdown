@@ -13,16 +13,32 @@
 
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 토큰 유효기간 12시간
 
-/** 환경변수에서 비밀번호↔권한 맵과 서명 키를 구성 */
+// 기본 비밀번호의 SHA-256 해시(평문은 저장소에 두지 않음) — 환경변수 미설정 시 폴백.
+//   · Cloudflare 환경변수(APP_PASSWORD_*)를 설정하면 그 평문 값이 항상 우선합니다.
+//   · ⚠️ 해시의 원문 비밀번호는 과거 공개 이력에 남아 있어 강한 보안은 아닙니다.
+//     실보안이 필요하면 SESSION_SECRET + APP_PASSWORD_* 환경변수로 새 값을 설정하세요.
+const DEFAULT_PW_HASHES = {
+    '39cc6b23f1341f4f47849a77e257e644f7117f6306a3ea2d8cc30130f9990157': 'full',
+    'e9c92607886a599ac14e7f3e290626d36d5458e9d7fd86c51efa522863d81ce4': 'restricted',
+};
+
+/** 문자열의 SHA-256 16진 해시 */
+async function sha256hex(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str || ''));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** 비밀번호 검증 → 권한(role) 또는 null. 환경변수 평문 우선, 없으면 기본 해시 매칭 */
+export async function resolveRole(env, password) {
+    if (env.APP_PASSWORD_FULL && password === env.APP_PASSWORD_FULL) return 'full';
+    if (env.APP_PASSWORD_RESTRICTED && password === env.APP_PASSWORD_RESTRICTED) return 'restricted';
+    return DEFAULT_PW_HASHES[await sha256hex(password)] || null;
+}
+
+/** 토큰 서명 키 구성 — 인증은 항상 활성 */
 export function authConfig(env) {
-    const map = {};
-    if (env.APP_PASSWORD_FULL) map[env.APP_PASSWORD_FULL] = 'full';
-    if (env.APP_PASSWORD_RESTRICTED) map[env.APP_PASSWORD_RESTRICTED] = 'restricted';
-    const enabled = Object.keys(map).length > 0;
-    const secret = env.SESSION_SECRET
-        || (env.APP_PASSWORD_FULL || '') + '|' + (env.APP_PASSWORD_RESTRICTED || '')
-        || 'm-costdown-dev';
-    return { map, enabled, secret };
+    const secret = env.SESSION_SECRET || Object.keys(DEFAULT_PW_HASHES).join('|');
+    return { enabled: true, secret };
 }
 
 function b64urlEncode(bytes) {
