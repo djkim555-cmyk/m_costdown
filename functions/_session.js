@@ -69,25 +69,35 @@ function timingSafeEqual(a, b) {
     return diff === 0;
 }
 
-/** role 에 대한 서명 토큰 발급 (payload.signature 형식) */
+// JWT(HS256) 형식으로 발급 — header.payload.signature, exp 는 초 단위.
+//   클라이언트 라우터(ViewLogic)가 payload(중간 조각)를 디코드해 만료를 검사하므로
+//   반드시 3조각 JWT 형식이어야 한다.
+const JWT_HEADER = b64urlEncode(new TextEncoder().encode(
+    JSON.stringify({ alg: 'HS256', typ: 'JWT' }),
+));
+
+/** role 에 대한 서명 토큰 발급 (JWT HS256: header.payload.signature) */
 export async function issueToken(secret, role, nowMs) {
     const payload = b64urlEncode(new TextEncoder().encode(
-        JSON.stringify({ role, exp: nowMs + TOKEN_TTL_MS }),
+        JSON.stringify({ role, exp: Math.floor((nowMs + TOKEN_TTL_MS) / 1000) }),
     ));
-    const sig = await hmac(secret, payload);
-    return payload + '.' + sig;
+    const signingInput = JWT_HEADER + '.' + payload;
+    const sig = await hmac(secret, signingInput);
+    return signingInput + '.' + sig;
 }
 
 /** 토큰 검증 → 유효하면 { role }, 아니면 null */
 export async function verifyToken(secret, token, nowMs) {
-    if (!token || token.indexOf('.') < 0) return null;
-    const [payload, sig] = token.split('.');
-    const expected = await hmac(secret, payload);
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const [header, payload, sig] = parts;
+    const expected = await hmac(secret, header + '.' + payload);
     if (!timingSafeEqual(sig, expected)) return null;
     let data;
     try { data = JSON.parse(b64urlDecodeToString(payload)); }
     catch (e) { return null; }
-    if (!data || typeof data.exp !== 'number' || data.exp < nowMs) return null;
+    if (!data || typeof data.exp !== 'number' || data.exp * 1000 < nowMs) return null;
     return { role: data.role };
 }
 

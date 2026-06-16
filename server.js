@@ -43,22 +43,27 @@ function b64url(buf) {
     return Buffer.from(buf).toString('base64')
         .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
+// JWT(HS256) 형식 — header.payload.signature, exp 는 초 단위(클라이언트 라우터 호환)
+const JWT_HEADER = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
 function signToken(role) {
-    const payload = b64url(JSON.stringify({ role, exp: Date.now() + TOKEN_TTL_MS }));
-    const sig = b64url(crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest());
-    return payload + '.' + sig;
+    const payload = b64url(JSON.stringify({ role, exp: Math.floor((Date.now() + TOKEN_TTL_MS) / 1000) }));
+    const signingInput = JWT_HEADER + '.' + payload;
+    const sig = b64url(crypto.createHmac('sha256', SESSION_SECRET).update(signingInput).digest());
+    return signingInput + '.' + sig;
 }
 function verifyToken(token) {
-    if (!token || token.indexOf('.') < 0) return null;
-    const [payload, sig] = token.split('.');
-    const expected = b64url(crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest());
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const [header, payload, sig] = parts;
+    const expected = b64url(crypto.createHmac('sha256', SESSION_SECRET).update(header + '.' + payload).digest());
     const a = Buffer.from(sig);
     const b = Buffer.from(expected);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
     let data;
     try { data = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()); }
     catch (e) { return null; }
-    if (!data || typeof data.exp !== 'number' || data.exp < Date.now()) return null;
+    if (!data || typeof data.exp !== 'number' || data.exp * 1000 < Date.now()) return null;
     return { role: data.role };
 }
 function bearer(req) {
