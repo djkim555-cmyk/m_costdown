@@ -267,18 +267,21 @@ export default {
         },
 
         // 월별 실제 비용 입력 변경 → 천단위 콤마 정리 후 저장 (빈값이면 원본값으로 복귀)
+        // 주의: 중첩 객체를 in-place 로 바꾸면(this.edits.months[id][idx]=…) 이 런타임에서
+        //       반응성·직렬화가 누락돼 저장 payload 에 안 실린다. splits 와 동일하게
+        //       "새 객체를 만들어 최상위 키로 통째 재할당"해야 안전하게 저장된다.
         onMonthChange(row, idx, ev) {
             const id = row._id;
-            if (!this.edits.months[id]) this.edits.months[id] = {};
+            const months = Object.assign({}, this.edits.months[id] || {});
             const raw = String(ev.target.value || '').trim();
             if (raw === '') {
-                delete this.edits.months[id][idx];
-                ev.target.value = this.monthInputVal(row, idx);
+                delete months[idx];
             } else {
                 const n = Number(raw.replace(/[^\d.-]/g, '')) || 0;
-                this.edits.months[id][idx] = window.GS.comma(n);
-                ev.target.value = this.edits.months[id][idx];
+                months[idx] = window.GS.comma(n);
             }
+            this.edits.months[id] = months;
+            ev.target.value = this.monthInputVal(row, idx);
             this.saveEdit('months');
         },
 
