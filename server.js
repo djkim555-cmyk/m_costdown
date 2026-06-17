@@ -85,26 +85,31 @@ db.exec(`
         saving       TEXT,
         saving_month TEXT,
         splits       TEXT,
+        months       TEXT,
         updated_at   INTEGER
     );
 `);
 
-// 구버전 스키마(0001) 호환: 컬럼 누락 시에만 ALTER (기존 데이터 보존)
+// 구버전 스키마(0001/0002) 호환: 컬럼 누락 시에만 ALTER (기존 데이터 보존)
 const existingCols = new Set(
     db.prepare("PRAGMA table_info(expense_edits)").all().map((c) => c.name),
 );
 if (!existingCols.has('saving_month')) {
     db.exec('ALTER TABLE expense_edits ADD COLUMN saving_month TEXT');
 }
+if (!existingCols.has('months')) {
+    db.exec('ALTER TABLE expense_edits ADD COLUMN months TEXT');
+}
 
-const FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits'];
-const JSON_FIELDS = new Set(['dept', 'splits']);
+const FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits', 'months'];
+const JSON_FIELDS = new Set(['dept', 'splits', 'months']);
 
 function parseField(field, raw) {
-    if (raw == null) return JSON_FIELDS.has(field) ? (field === 'dept' ? [] : []) : '';
+    const jsonDefault = field === 'months' ? {} : [];
+    if (raw == null) return JSON_FIELDS.has(field) ? jsonDefault : '';
     if (!JSON_FIELDS.has(field)) return raw;
     try { return JSON.parse(raw); }
-    catch (e) { return field === 'dept' ? [] : []; }
+    catch (e) { return jsonDefault; }
 }
 
 function serializeField(field, val) {
@@ -118,8 +123,8 @@ function serializeField(field, val) {
 
 const selectAllStmt = db.prepare('SELECT * FROM expense_edits');
 const upsertStmt = db.prepare(`
-    INSERT INTO expense_edits (row_id, category, lever, dept, reducible, memo, saving, saving_month, splits, updated_at)
-    VALUES (:row_id, :category, :lever, :dept, :reducible, :memo, :saving, :saving_month, :splits, :updated_at)
+    INSERT INTO expense_edits (row_id, category, lever, dept, reducible, memo, saving, saving_month, splits, months, updated_at)
+    VALUES (:row_id, :category, :lever, :dept, :reducible, :memo, :saving, :saving_month, :splits, :months, :updated_at)
     ON CONFLICT(row_id) DO UPDATE SET
         category     = excluded.category,
         lever        = excluded.lever,
@@ -129,6 +134,7 @@ const upsertStmt = db.prepare(`
         saving       = excluded.saving,
         saving_month = excluded.saving_month,
         splits       = excluded.splits,
+        months       = excluded.months,
         updated_at   = excluded.updated_at
 `);
 const beginStmt = db.prepare('BEGIN');
@@ -137,7 +143,7 @@ const rollbackStmt = db.prepare('ROLLBACK');
 
 function loadAllEdits() {
     const rows = selectAllStmt.all();
-    const out = { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {} };
+    const out = { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {}, months: {} };
     for (const r of rows) {
         for (const f of FIELDS) {
             out[f][r.row_id] = parseField(f, r[f]);
@@ -168,6 +174,7 @@ function saveAllEdits(payload) {
                 saving: serializeField('saving', payload.saving && payload.saving[id]),
                 saving_month: serializeField('saving_month', payload.saving_month && payload.saving_month[id]),
                 splits: serializeField('splits', payload.splits && payload.splits[id]),
+                months: serializeField('months', payload.months && payload.months[id]),
                 updated_at: now,
             });
         }

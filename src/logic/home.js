@@ -20,6 +20,7 @@ export default {
             ]);
             this.items = window.GS.applyExpenseEdits(items);
             this.tables = forecast.tables || [];
+            this.applyActuals();
         } catch (e) {
             console.error('대시보드 데이터 로딩 실패:', e);
         }
@@ -49,6 +50,68 @@ export default {
     methods: {
         comma(n) { return window.GS.comma(n); },
         short(n) { return window.GS.short(n); },
+
+        // 비용 상세에서 입력된 월별 실제 비용을 '절감 전략 수행' 표에 덮어쓴다.
+        //   · 항목 행(지급수수료/광고선전비/외주비) + 소계 행의 5~12월(forecastFrom~)을 실제값으로 채움
+        //   · 실제값이 있는 월은 컬럼 라벨의 '(E)'(예상치 표시)를 떼어 실측월로 표시
+        //   · 회사 예측과의 증감(%)은 기존 cellSaving/savingText 가 셀마다 자동 표시
+        applyActuals() {
+            const tbl = this.tables.find((t) => t.baseRef != null);
+            if (!tbl) return;
+
+            // 항목명별 유효 월 실적 합계 (cost-items + 편집 반영)
+            const groups = {};
+            for (const it of this.items) {
+                const name = (it.item || '').trim();
+                if (!name) continue;
+                const g = groups[name] || (groups[name] = new Array(12).fill(0));
+                (it.months || []).forEach((v, i) => { g[i] += (Number(v) || 0); });
+            }
+
+            const from = tbl.forecastFrom;
+            const itemRows = tbl.rows.filter((r) => r.kind === 'item');
+            const hasActual = new Array(12).fill(false);
+
+            // 항목 행: 실적 합계로 덮어쓰기 (0원이면 미입력으로 보고 null 유지)
+            for (const row of itemRows) {
+                const g = groups[(row.name || '').trim()];
+                if (!g) continue;
+                for (let mi = from; mi < 12; mi++) {
+                    if (g[mi] > 0) {
+                        row.values[mi] = g[mi];
+                        hasActual[mi] = true;
+                    }
+                }
+            }
+
+            // 소계 행: 항목 행 실적 합 (해당 월에 실적이 하나라도 있을 때만)
+            const sub = tbl.rows.find((r) => r.kind === 'sub');
+            if (sub) {
+                for (let mi = from; mi < 12; mi++) {
+                    if (!hasActual[mi]) continue;
+                    let s = 0;
+                    for (const row of itemRows) {
+                        const v = row.values[mi];
+                        if (v != null) s += v;
+                    }
+                    sub.values[mi] = s;
+                }
+            }
+
+            // 합계 컬럼 재계산 (실적이 쌓일수록 누적)
+            for (const row of tbl.rows) {
+                if (row.kind === 'item' || row.kind === 'sub') {
+                    row.total = row.values.reduce((a, v) => a + (v == null ? 0 : v), 0);
+                }
+            }
+
+            // 실적이 입력된 월은 컬럼 라벨에서 '(E)' 제거 (예측 → 실측)
+            (tbl.cols || []).forEach((c, ci) => {
+                if (hasActual[ci] && typeof c.label === 'string') {
+                    c.label = c.label.replace('(E)', '');
+                }
+            });
+        },
 
         // 1~4월(index 0~3) 월평균
         avgQ1(months) {

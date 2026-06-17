@@ -43,30 +43,36 @@ const STORES = {
     saving_month: { init: () => '' },
     // 비용분기: 행을 팀별로 % 분기한 하위 행 목록 [{ dept, percent }]
     splits: { init: () => [] },
+    // 월별 실제 비용 입력값(5~12월): { 월index(4~11): "콤마문자열" } — 없으면 원본(cost-items) 값 사용
+    months: { init: () => ({}) },
 };
 
 // 인라인 편집 시 서버 PUSH 디바운스 (ms)
 const SAVE_DEBOUNCE_MS = 600;
 
+// 월별 실제 비용을 입력(편집)할 수 있는 시작 월 인덱스 (0=1월 … 4=5월). 1~4월은 확정 실적이라 읽기 전용
+const MONTH_EDIT_FROM = 4;
+
 export default {
     layout: 'default',
 
     data() {
-        // 1~12월 컬럼 (5월은 예상치 → '5월(E)', 필터 없음)
+        // 1~12월 컬럼 (5~12월은 실제 비용 입력 가능, 필터 없음)
         const monthCols = [];
         for (let i = 0; i < 12; i++) {
             monthCols.push({
                 key: 'm' + i,
-                label: (i + 1) + '월' + (i === 4 ? '(E)' : ''),
+                label: (i + 1) + '월',
                 type: 'num',
                 filter: false,
+                editable: i >= MONTH_EDIT_FROM,
             });
         }
 
         return {
             loaded: false,
             items: [],
-            edits: { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {} },
+            edits: { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {}, months: {} },
             search: '',
             // 페이지 진입 시 기본 정렬: 항목 컬럼 오름차순
             sortKey: 'item',
@@ -129,6 +135,11 @@ export default {
                     ? arr.map((s) => this.normSplit(s))
                     : [];
             }
+            // 월별 실제 비용: 항상 객체 형태로 정규화 (null/배열 방어)
+            for (const id in this.edits.months) {
+                const v = this.edits.months[id];
+                this.edits.months[id] = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+            }
         } catch (e) {
             console.error('비용 목록 데이터 로딩 실패:', e);
         }
@@ -169,7 +180,7 @@ export default {
         },
 
         filteredTotal() {
-            return window.GS.sum(this.filtered.map((i) => i.total));
+            return window.GS.sum(this.filtered.map((i) => this.rowTotal(i)));
         },
 
         // 전체 분기 행 건수 (모든 행의 splits 배열 길이 합)
@@ -220,9 +231,55 @@ export default {
         // 0원은 '–' 로 표기
         cell(n) { return n ? window.GS.comma(n) : '–'; },
 
-        // 특정 월(0~11)의 합계 (필터 적용 결과 기준)
+        // 특정 월(0~11)의 합계 (필터 적용 결과 기준, 입력된 실제 비용 반영)
         monthTotal(idx) {
-            return window.GS.sum(this.filtered.map((r) => r.months[idx] || 0));
+            return window.GS.sum(this.filtered.map((r) => this.monthEff(r, idx)));
+        },
+
+        // ── 월별 실제 비용 입력 ──────────────────────────────────────
+        // 해당 월이 입력 가능한지 (5~12월)
+        monthEditable(idx) {
+            return idx >= MONTH_EDIT_FROM;
+        },
+
+        // 월 셀의 유효값 = 입력된 실제 비용(있으면) 아니면 원본(cost-items) 값
+        monthEff(row, idx) {
+            const m = this.edits.months[row._id];
+            if (m && m[idx] != null && m[idx] !== '') {
+                return Number(String(m[idx]).replace(/[^\d.-]/g, '')) || 0;
+            }
+            return (row.months || [])[idx] || 0;
+        },
+
+        // 행 합계 = 유효 월값 12개의 합 (입력된 실제 비용 반영)
+        rowTotal(row) {
+            let s = 0;
+            for (let i = 0; i < 12; i++) s += this.monthEff(row, i);
+            return s;
+        },
+
+        // 입력 box 에 표시할 값 — 입력값(콤마문자열)이 있으면 그대로, 없으면 원본값(0은 빈칸)
+        monthInputVal(row, idx) {
+            const m = this.edits.months[row._id];
+            if (m && m[idx] != null && m[idx] !== '') return m[idx];
+            const base = (row.months || [])[idx] || 0;
+            return base ? window.GS.comma(base) : '';
+        },
+
+        // 월별 실제 비용 입력 변경 → 천단위 콤마 정리 후 저장 (빈값이면 원본값으로 복귀)
+        onMonthChange(row, idx, ev) {
+            const id = row._id;
+            if (!this.edits.months[id]) this.edits.months[id] = {};
+            const raw = String(ev.target.value || '').trim();
+            if (raw === '') {
+                delete this.edits.months[id][idx];
+                ev.target.value = this.monthInputVal(row, idx);
+            } else {
+                const n = Number(raw.replace(/[^\d.-]/g, '')) || 0;
+                this.edits.months[id][idx] = window.GS.comma(n);
+                ev.target.value = this.edits.months[id][idx];
+            }
+            this.saveEdit('months');
         },
 
         // 절감금액(E) 문자열 → 숫자
@@ -254,9 +311,10 @@ export default {
         // 컬럼의 원본 값 (필터·정렬 기준)
         raw(row, key) {
             if (key === 'dept') return (this.edits.dept[row._id] || []).join(', ');
+            if (key === 'months') return '';
             if (key in this.edits) return (this.edits[key][row._id] || '').trim();
-            if (key === 'total') return row.total;
-            if (/^m\d+$/.test(key)) return row.months[Number(key.slice(1))] || 0;
+            if (key === 'total') return this.rowTotal(row);
+            if (/^m\d+$/.test(key)) return this.monthEff(row, Number(key.slice(1)));
             return row[key] || '';
         },
 
@@ -696,15 +754,15 @@ export default {
             this.saveEdit('splits');
         },
 
-        // 분기 행에서 월 셀 값 (parent.months[idx] * percent / 100)
+        // 분기 행에서 월 셀 값 (유효 월값 * percent / 100)
         splitMonth(parentRow, percent, mIdx) {
-            const base = (parentRow.months || [])[mIdx] || 0;
+            const base = this.monthEff(parentRow, mIdx);
             return Math.round(base * (Number(percent) || 0) / 100);
         },
 
-        // 분기 행에서 합계 값 (parent.total * percent / 100)
+        // 분기 행에서 합계 값 (유효 행 합계 * percent / 100)
         splitTotal(parentRow, percent) {
-            return Math.round((parentRow.total || 0) * (Number(percent) || 0) / 100);
+            return Math.round(this.rowTotal(parentRow) * (Number(percent) || 0) / 100);
         },
     },
 };

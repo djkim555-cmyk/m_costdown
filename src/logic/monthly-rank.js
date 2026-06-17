@@ -7,6 +7,7 @@ export default {
             items: [],
             selectedItems: [],       // 선택된 항목명 배열 ([] = 전체)
             selectedCategories: [],  // 선택된 분류 배열 ([] = 전체)
+            selectedMonth: 'avg',    // 'avg' = 월평균, 0~11 = 특정 월
         };
     },
 
@@ -24,7 +25,43 @@ export default {
     },
 
     computed: {
-        // 비용항목별 (개별 행) — 1~4월 월평균 내림차순 (전체 순위 부여)
+        // 실제 데이터가 있는 월 인덱스 목록 (전 항목 합이 0보다 큰 월)
+        actualMonthIdxs() {
+            const idxs = [];
+            for (let i = 0; i < 12; i++) {
+                let s = 0;
+                for (const it of this.items) s += Number((it.months || [])[i]) || 0;
+                if (s > 0) idxs.push(i);
+            }
+            return idxs;
+        },
+
+        // 보기 모드 옵션: 월평균 + 실데이터가 있는 각 월
+        monthOptions() {
+            return [
+                { value: 'avg', label: '월평균' },
+                ...this.actualMonthIdxs.map((i) => ({ value: i, label: (i + 1) + '월' })),
+            ];
+        },
+
+        // 월평균 집계 대상 월 라벨 (예: "1~5월")
+        avgRangeLabel() {
+            const idxs = this.actualMonthIdxs;
+            if (!idxs.length) return '데이터 없음';
+            const contiguous = idxs.every((v, k) => k === 0 || v === idxs[k - 1] + 1);
+            return contiguous
+                ? `${idxs[0] + 1}~${idxs[idxs.length - 1] + 1}월`
+                : idxs.map((i) => (i + 1) + '월').join(', ');
+        },
+
+        // 현재 보기 모드 라벨
+        modeLabel() {
+            return this.selectedMonth === 'avg'
+                ? `월평균 (${this.avgRangeLabel})`
+                : `${Number(this.selectedMonth) + 1}월`;
+        },
+
+        // 비용항목별 (개별 행) — 선택 모드(월평균/특정월) 값 내림차순 (전체 순위 부여)
         // 비용 상세에서 분기된 행은 별도 리스트로 추가되어 순위에 포함된다.
         byItem() {
             const rows = [];
@@ -34,7 +71,7 @@ export default {
                 const detail = (i.detail || '').trim();
                 const vendor = (i.vendor || '').trim();
                 const baseDetail = [detail, vendor].filter(Boolean).join(' · ');
-                const baseAvg = this.avgQ1(i.months);
+                const baseAvg = this.rowValue(i.months);
                 const splits = Array.isArray(i.splits) ? i.splits : [];
                 const splitSum = splits.reduce((s, x) => s + (Number(x.percent) || 0), 0);
                 const parentPct = Math.max(0, Math.min(100, 100 - splitSum));
@@ -120,11 +157,16 @@ export default {
             return `분류 ${n}개 선택`;
         },
 
-        // 1~4월(index 0~3) 월평균
-        avgQ1(months) {
-            const arr = (months || []).slice(0, 4);
-            const sum = arr.reduce((a, b) => a + (Number(b) || 0), 0);
-            return sum / 4;
+        // 선택 모드에 따른 비용값 — 월평균(실데이터 월 평균) 또는 특정 월값
+        rowValue(months) {
+            if (this.selectedMonth === 'avg') {
+                const idxs = this.actualMonthIdxs;
+                if (!idxs.length) return 0;
+                let sum = 0;
+                for (const i of idxs) sum += Number((months || [])[i]) || 0;
+                return sum / idxs.length;
+            }
+            return Number((months || [])[this.selectedMonth]) || 0;
         },
 
         // 가로 막대 너비 (목록 중 최대값 기준)

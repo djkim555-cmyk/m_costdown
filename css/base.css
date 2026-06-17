@@ -246,6 +246,9 @@ body {
 .table-expense th.col-detail, .table-expense td.col-detail { min-width: 220px; }
 .table-expense th.col-memo, .table-expense td.col-memo { min-width: 400px; }
 .table-expense th.col-branch, .table-expense td.col-branch { min-width: 92px; width: 1%; white-space: nowrap; }
+/* 월별 실제 비용 입력 컬럼 (5~12월) */
+.table-expense td.col-month-edit { min-width: 96px; }
+.table-expense .month-input { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* 비용분기 — 원행 % 배지 + 분기 추가 버튼 (부모 행) */
 .branch-cell { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }

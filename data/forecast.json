@@ -32,7 +32,7 @@
       "baseRef": 0,
       "cols": [
         { "label": "1월" }, { "label": "2월" }, { "label": "3월" }, { "label": "4월" },
-        { "label": "5월(E)", "stage": "예측" }, { "label": "6월(E)", "stage": "전략수립" },
+        { "label": "5월", "stage": "예측" }, { "label": "6월(E)", "stage": "전략수립" },
         { "label": "7월(E)", "stage": "실행 1M" }, { "label": "8월(E)", "stage": "실행 2M" },
         { "label": "9월(E)", "stage": "실행 3M" }, { "label": "10월(E)", "stage": "실행 4M" },
         { "label": "11월(E)", "stage": "실행 5M" }, { "label": "12월(E)", "stage": "실행 6M" }

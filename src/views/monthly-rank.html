@@ -14,10 +14,15 @@
             <div class="card-body">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                     <div class="card-title-sm mb-0">
-                        비용항목 월비용 순위 — 1~4월 월평균
+                        비용항목 월비용 순위 — {{ modeLabel }}
                         <span class="text-muted">({{ filteredByItem.length }} / {{ byItem.length }}건)</span>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
+                        <!-- 보기 기준: 월평균 / 특정 월 -->
+                        <select class="form-select form-select-sm w-auto" v-model="selectedMonth">
+                            <option v-for="op in monthOptions" :key="op.value" :value="op.value">{{ op.label }}</option>
+                        </select>
+
                         <!-- 항목 멀티 선택 -->
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle filter-btn-multi"

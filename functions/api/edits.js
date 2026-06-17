@@ -7,14 +7,15 @@
  *   D1 binding 이름: DB  (wrangler.toml 의 [[d1_databases]] binding)
  * ============================================================ */
 
-const FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits'];
-const JSON_FIELDS = new Set(['dept', 'splits']);
+const FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits', 'months'];
+const JSON_FIELDS = new Set(['dept', 'splits', 'months']);
 
 function parseField(field, raw) {
-    if (raw == null) return JSON_FIELDS.has(field) ? [] : '';
+    const jsonDefault = field === 'months' ? {} : [];
+    if (raw == null) return JSON_FIELDS.has(field) ? jsonDefault : '';
     if (!JSON_FIELDS.has(field)) return raw;
     try { return JSON.parse(raw); }
-    catch (e) { return []; }
+    catch (e) { return jsonDefault; }
 }
 
 function serializeField(field, val) {
@@ -36,7 +37,7 @@ function jsonResponse(data, status) {
 export async function onRequestGet({ env }) {
     try {
         const { results } = await env.DB.prepare('SELECT * FROM expense_edits').all();
-        const out = { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {} };
+        const out = { category: {}, lever: {}, dept: {}, reducible: {}, memo: {}, saving: {}, saving_month: {}, splits: {}, months: {} };
         for (const r of (results || [])) {
             for (const f of FIELDS) {
                 out[f][r.row_id] = parseField(f, r[f]);
@@ -67,8 +68,8 @@ export async function onRequestPost({ request, env }) {
     const now = Date.now();
 
     const insertSql = `
-        INSERT INTO expense_edits (row_id, category, lever, dept, reducible, memo, saving, saving_month, splits, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO expense_edits (row_id, category, lever, dept, reducible, memo, saving, saving_month, splits, months, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(row_id) DO UPDATE SET
             category     = excluded.category,
             lever        = excluded.lever,
@@ -78,6 +79,7 @@ export async function onRequestPost({ request, env }) {
             saving       = excluded.saving,
             saving_month = excluded.saving_month,
             splits       = excluded.splits,
+            months       = excluded.months,
             updated_at   = excluded.updated_at
     `;
 
@@ -94,6 +96,7 @@ export async function onRequestPost({ request, env }) {
                 serializeField('saving', payload.saving && payload.saving[id]),
                 serializeField('saving_month', payload.saving_month && payload.saving_month[id]),
                 serializeField('splits', payload.splits && payload.splits[id]),
+                serializeField('months', payload.months && payload.months[id]),
                 now,
             ));
         }

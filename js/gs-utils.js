@@ -14,7 +14,8 @@
     const API_BASE = STATIC_ONLY_PORTS.has(location.port) ? 'http://localhost:3001' : '';
 
     // 비용 편집값 필드 목록 (서버 스키마와 1:1)
-    const EDIT_FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits'];
+    //   months: 월별 실제 비용 입력값 (5~12월). { 월index(4~11): "콤마문자열" }
+    const EDIT_FIELDS = ['category', 'lever', 'dept', 'reducible', 'memo', 'saving', 'saving_month', 'splits', 'months'];
 
     // 구버전 localStorage 키 (마이그레이션 + 오프라인 폴백용)
     const LEGACY_KEYS = {
@@ -26,6 +27,7 @@
         saving: 'gs-expense-saving',
         saving_month: 'gs-expense-saving-month',
         splits: 'gs-expense-splits',
+        months: 'gs-expense-months',
     };
 
     function emptyEdits() {
@@ -216,6 +218,19 @@
                 it.saving = Number(savRaw.replace(/[^\d.-]/g, '')) || 0;
                 it.savingMonth = (e.saving_month && e.saving_month[id] || '').toString();
                 it.splits = Array.isArray(e.splits[id]) ? e.splits[id] : [];
+
+                // 월별 실제 비용 입력값(5~12월)을 months 배열에 덮어쓰고 total 재계산
+                const mo = (e.months && e.months[id]) || null;
+                if (mo && typeof mo === 'object') {
+                    it.months = (it.months || []).slice();
+                    for (const k in mo) {
+                        const idx = Number(k);
+                        if (idx >= 0 && idx < 12 && mo[k] !== '' && mo[k] != null) {
+                            it.months[idx] = Number(String(mo[k]).replace(/[^\d.-]/g, '')) || 0;
+                        }
+                    }
+                    it.total = it.months.reduce((a, b) => a + (Number(b) || 0), 0);
+                }
             });
             return items;
         },

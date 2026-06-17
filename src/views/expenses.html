@@ -145,8 +145,17 @@
                                         <input type="month" class="form-control form-control-sm cell-input"
                                                v-model="edits.saving_month[row._id]" @change="saveEdit('saving_month')">
                                     </td>
-                                    <td v-for="n in 12" :key="n" class="num">{{ cell(row.months[n - 1]) }}</td>
-                                    <td class="num fw-semibold">{{ comma(row.total) }}</td>
+                                    <td v-for="n in 12" :key="n" class="num"
+                                        :class="{ 'col-month-edit': monthEditable(n - 1) }">
+                                        <template v-if="!monthEditable(n - 1)">{{ cell(row.months[n - 1]) }}</template>
+                                        <input v-else type="text" inputmode="numeric"
+                                               class="form-control form-control-sm cell-input month-input num"
+                                               :value="monthInputVal(row, n - 1)"
+                                               @change="onMonthChange(row, n - 1, $event)"
+                                               :title="(n) + '월 실제 비용 입력'"
+                                               placeholder=" ">
+                                    </td>
+                                    <td class="num fw-semibold">{{ comma(rowTotal(row)) }}</td>
                                 </tr>
                                 <!-- 분기 하위 행 — 부모 행과 동일한 편집 컨트롤 + 절감가능여부 배경색 적용 -->
                                 <tr v-for="(split, si) in splitArr(row._id)" :key="row._id + '-s' + si"
